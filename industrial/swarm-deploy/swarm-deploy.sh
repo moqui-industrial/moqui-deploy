@@ -64,7 +64,7 @@ run_scp "device-gateway/gateway-mqtt.properties" "${node1}:~/deploy/device-gatew
 # Example output:
 #     Swarm initialized: current node (aowkrt21qx3tk7ordgdpqf1h7) is now a manager.
 #     To add a worker to this swarm, run the following command:
-#     docker swarm join --token SWMTKN-1-1wol43u7cj4i214hlxbaairbotj6cgtfazp8dqrwyxi3vicucb-ary5bc2y88m9k8800ctpv6l4x 10.96.79.158:2377
+#     docker swarm join --token SWMTKN-1-YOUR_DOCKER_SWARM_JOIN_TOKEN_HERE 10.96.79.158:2377
 #     To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
 echo "Initializing Swarm"
 run_ssh ${node1} "docker swarm init --advertise-addr ${node1_ip}"
