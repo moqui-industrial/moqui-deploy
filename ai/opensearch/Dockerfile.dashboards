@@ -1,0 +1,13 @@
+ARG OPENSEARCH_DASHBOARDS_VERSION=latest
+FROM opensearchproject/opensearch-dashboards:${OPENSEARCH_DASHBOARDS_VERSION}
+
+ARG DASHBOARDS_PLUGIN_INSTALL_STRICT=false
+ENV DASHBOARDS_PLUGIN_INSTALL_STRICT=${DASHBOARDS_PLUGIN_INSTALL_STRICT}
+
+USER root
+COPY install-dashboards-plugins.sh /usr/local/bin/install-dashboards-plugins.sh
+RUN chmod +x /usr/local/bin/install-dashboards-plugins.sh \
+ && /usr/local/bin/install-dashboards-plugins.sh \
+ && chown -R opensearch-dashboards:opensearch-dashboards /usr/share/opensearch-dashboards
+
+USER opensearch-dashboards

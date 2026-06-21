@@ -1,0 +1,22 @@
+# LibreChat configuration for Moqui integration.
+# https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/custom_config
+version: 1.2.1
+cache: true
+
+# MCP domain allowlist — required to permit host.docker.internal (private IP).
+# Without this, LibreChat's SSRF protection blocks all private-IP MCP servers.
+mcpSettings:
+  allowedDomains:
+    - "http://host.docker.internal:8080"
+
+# MCP server configuration — Moqui MCP integration.
+# LibreChat reaches Moqui on the host via host.docker.internal:8080.
+# Authorization: Basic base64(john.doe:moqui) — replace with a dedicated MCP user in production.
+mcpServers:
+  moqui:
+    type: streamable-http
+    url: "http://host.docker.internal:8080/mcp/message"
+    headers:
+      Authorization: "Basic am9obi5kb2U6bW9xdWk="
+    timeout: 30000
+    initTimeout: 10000

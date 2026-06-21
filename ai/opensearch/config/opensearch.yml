@@ -1,0 +1,16 @@
+# Template configuration for Moqui-integrated OpenSearch deployment.
+# This file is NOT mounted by default in opensearch-compose.yml to keep
+# the secure defaults from the official image.
+
+cluster.name: moqui-opensearch
+node.name: moqui-search-node-1
+
+# For single-node local deployment
+discovery.type: single-node
+network.host: 0.0.0.0
+http.port: 9200
+transport.port: 9300
+
+# Optional: keep this in sync with RAG template settings
+# index.knn: true
+# index.knn.algo_param.ef_search: 100

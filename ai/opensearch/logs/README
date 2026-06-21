@@ -1,0 +1,2 @@
+OpenSearch container logs can be mapped here if needed.
+Uncomment the logs volume in opensearch-compose.yml.

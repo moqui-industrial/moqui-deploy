@@ -1,0 +1,77 @@
+# Dedicated OpenSearch stack for the Moqui AI profile.
+# Uses custom images that install official OpenSearch plugins at build time.
+#
+# Build and run:
+#   docker compose -f ai/opensearch-compose.yml -p moqui-ai up -d --build
+#
+# Verify plugins:
+#   ./ai/opensearch/plugins-report.sh
+#
+# Moqui runtime variables to point to this stack:
+#   elasticsearch_url=https://moqui-search:9200
+#   elasticsearch_user=admin
+#   elasticsearch_password=<your password>
+
+services:
+  moqui-search:
+    build:
+      context: ./opensearch
+      dockerfile: Dockerfile
+      args:
+        OPENSEARCH_VERSION: ${OPENSEARCH_VERSION:-latest}
+        PLUGIN_INSTALL_STRICT: ${PLUGIN_INSTALL_STRICT:-true}
+    image: moqui/opensearch-all-plugins:${OPENSEARCH_VERSION:-latest}
+    container_name: moqui-search
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:9200:9200
+      - 127.0.0.1:9300:9300
+    volumes:
+      - ./opensearch/data:/usr/share/opensearch/data
+      # Optional config override (disabled by default):
+      # - ./opensearch/config/opensearch.yml:/usr/share/opensearch/config/opensearch.yml:ro
+      # Optional logs mapping:
+      # - ./opensearch/logs:/usr/share/opensearch/logs
+    environment:
+      - OPENSEARCH_JAVA_OPTS=${OPENSEARCH_JAVA_OPTS:--Xms1g -Xmx1g}
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-MoquiElasticChangeMe@2026}
+      - discovery.type=single-node
+      - network.host=0.0.0.0
+      - plugins.security.ssl.http.enabled=true
+      - plugins.security.ssl.transport.enabled=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sSk -u admin:${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-MoquiElasticChangeMe@2026} https://127.0.0.1:9200 >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+
+  opensearch-dashboards:
+    build:
+      context: ./opensearch
+      dockerfile: Dockerfile.dashboards
+      args:
+        OPENSEARCH_DASHBOARDS_VERSION: ${OPENSEARCH_DASHBOARDS_VERSION:-latest}
+        DASHBOARDS_PLUGIN_INSTALL_STRICT: ${DASHBOARDS_PLUGIN_INSTALL_STRICT:-false}
+    image: moqui/opensearch-dashboards-all-plugins:${OPENSEARCH_DASHBOARDS_VERSION:-latest}
+    container_name: opensearch-dashboards
+    restart: unless-stopped
+    depends_on:
+      moqui-search:
+        condition: service_healthy
+    ports:
+      - 5601:5601
+    environment:
+      OPENSEARCH_HOSTS: '["https://moqui-search:9200"]'
+      OPENSEARCH_USERNAME: admin
+      OPENSEARCH_PASSWORD: ${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-MoquiElasticChangeMe@2026}
+
+networks:
+  default:
+    name: moqui_default
