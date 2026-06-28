@@ -4,8 +4,11 @@ These are opinionated configurations of different ways to deploy Moqui along wit
 
 ## Layout
 
-- `industrial/`: industrial and IoT-oriented deployment profile
-- `ai/`: AI-oriented local deployment profile for components such as LibreChat and OpenSearch used with `moqui-mcp`
+To keep deployments organized, configuration files are grouped into subdirectories based on their deployment profile:
+
+*   **`industrial/`**: Configurations for industrial IoT applications (includes Docker Swarm configurations, ActiveMQ, MQTT Device Gateway, Grafana dashboards, OpenSearch, Postgres/YugabyteDB clustered data stores, backups, and automated staging deployment scripts using Multipass).
+*   **`ai/`**: AI-oriented local deployment profile for components such as LibreChat and OpenSearch used with `moqui-mcp`.
+*   *Other profiles* (e.g., `ecommerce/`, `erp/`, etc.) can be added to customize deploy environments for specific application areas.
 
 ## Usage
 1. Fork it
