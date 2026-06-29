@@ -1,0 +1,8 @@
+Persistent Grafana data directory for local bind mounts.
+
+This directory is mounted to `/var/lib/grafana` by:
+- `industrial/moqui-postgres-compose.yml`
+- `industrial/grafana-compose.yml`
+
+Keep the directory in the repository so Docker bind mounts always have a target.
+Do not commit generated Grafana runtime files from local executions.

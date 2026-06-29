@@ -10,6 +10,13 @@ To keep deployments organized, configuration files are grouped into subdirectori
 *   **`ai/`**: AI-oriented local deployment profile for components such as LibreChat and OpenSearch used with `moqui-mcp`.
 *   *Other profiles* (e.g., `ecommerce/`, `erp/`, etc.) can be added to customize deploy environments for specific application areas.
 
+The `industrial/` profile also includes two Grafana usage modes:
+- integrated inside `moqui-postgres-compose.yml` for the full local stack
+- `grafana-compose.yml` for a single Grafana instance used with native Moqui
+
+Both modes share the same dashboard set and the same `grafana/datasource/datasource-compose.yml`
+definition so there is only one local Grafana datasource configuration to maintain.
+
 ## Usage
 1. Fork it
 2. Remove what you don't want

@@ -1,0 +1,639 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana",
+        "uid": "-- Grafana --"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "# Device Telemetry\nReusable dashboard for Moqui devices.\n\n- `ParameterLog`: numeric series and latest parameter values.\n- `Measurement`: one time series per measurement type and scope.\n- `DeviceLog`: chronological payload stream.\n\nCurrent device: `${device_id}`",
+        "mode": "markdown"
+      },
+      "pluginVersion": "11.0.0",
+      "title": "Overview",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "moqui-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "moqui-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT 'Parameter series' AS metric, COUNT(DISTINCT pl.parameter_id) AS value\nFROM parameter_log pl\nJOIN parameter p ON p.parameter_id = pl.parameter_id\nWHERE p.device_id = '${device_id}'\n  AND $__timeFilter(pl.observed_date)\nUNION ALL\nSELECT 'Measurement series' AS metric, COUNT(DISTINCT CONCAT_WS('|', m.measurement_type_id, COALESCE(m.work_effort_id, m.asset_id, m.facility_id, m.product_id, m.reason_enum_id, m.product_meter_id, m.asset_maintenance_id, 'unscoped'))) AS value\nFROM measurement m\nWHERE $__timeFilter(m.measurement_date)\n  AND (\n    m.work_effort_id = '${device_id}' OR\n    m.asset_id = '${device_id}' OR\n    m.facility_id = '${device_id}' OR\n    m.product_id = '${device_id}' OR\n    m.reason_enum_id = '${device_id}' OR\n    m.product_meter_id = '${device_id}' OR\n    m.asset_maintenance_id = '${device_id}'\n  )\nUNION ALL\nSELECT 'Device logs' AS metric, COUNT(*) AS value\nFROM device_log dl\nWHERE dl.device_id = '${device_id}'\n  AND $__timeFilter(dl.observed_date);",
+          "refId": "A"
+        }
+      ],
+      "title": "Coverage",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 10,
+      "panels": [],
+      "title": "ParameterLog",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "moqui-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 15,
+        "x": 0,
+        "y": 6
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "moqui-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  pl.observed_date AS \"time\",\n  COALESCE(pd.parameter_name, p.parameter_id) AS metric,\n  pl.numeric_value AS value\nFROM parameter_log pl\nJOIN parameter p ON p.parameter_id = pl.parameter_id\nLEFT JOIN parameter_def pd ON pd.parameter_def_id = p.parameter_def_id\nWHERE $__timeFilter(pl.observed_date)\n  AND p.device_id = '${device_id}'\n  AND pl.numeric_value IS NOT NULL\nORDER BY 1, 2;",
+          "refId": "A"
+        }
+      ],
+      "title": "ParameterLog Numeric Series",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "moqui-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 9,
+        "x": 15,
+        "y": 6
+      },
+      "id": 13,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "moqui-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT DISTINCT ON (pl.parameter_id)\n  COALESCE(pd.parameter_name, pl.parameter_id) AS \"Parameter\",\n  pl.observed_date AS \"Observed\",\n  pl.numeric_value AS \"Numeric\",\n  pl.symbolic_value AS \"Symbolic\",\n  pl.parameter_enum_id AS \"Enum\"\nFROM parameter_log pl\nJOIN parameter p ON p.parameter_id = pl.parameter_id\nLEFT JOIN parameter_def pd ON pd.parameter_def_id = p.parameter_def_id\nWHERE p.device_id = '${device_id}'\n  AND $__timeFilter(pl.observed_date)\nORDER BY pl.parameter_id, pl.observed_date DESC;",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest Parameter Values",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "moqui-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 12,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "moqui-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  pl.observed_date AS \"Observed\",\n  pl.sequence_num AS \"Seq\",\n  pl.parameter_id AS \"Parameter ID\",\n  COALESCE(pd.parameter_name, p.parameter_id) AS \"Parameter\",\n  pl.numeric_value AS \"Numeric\",\n  pl.symbolic_value AS \"Symbolic\",\n  pl.parameter_enum_id AS \"Enum\"\nFROM parameter_log pl\nJOIN parameter p ON p.parameter_id = pl.parameter_id\nLEFT JOIN parameter_def pd ON pd.parameter_def_id = p.parameter_def_id\nWHERE $__timeFilter(pl.observed_date)\n  AND p.device_id = '${device_id}'\nORDER BY pl.observed_date DESC\nLIMIT 200;",
+          "refId": "A"
+        }
+      ],
+      "title": "ParameterLog Event Stream",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 20,
+      "panels": [],
+      "title": "Measurement",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "moqui-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 16,
+        "x": 0,
+        "y": 25
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "moqui-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  m.measurement_date AS \"time\",\n  CONCAT_WS(' / ', m.measurement_type_id, COALESCE(m.work_effort_id, m.asset_id, m.facility_id, m.product_id, m.reason_enum_id, m.product_meter_id, m.asset_maintenance_id, 'unscoped')) AS metric,\n  m.measurement_value AS value\nFROM measurement m\nWHERE $__timeFilter(m.measurement_date)\n  AND m.measurement_value IS NOT NULL\n  AND (\n    m.work_effort_id = '${device_id}' OR\n    m.asset_id = '${device_id}' OR\n    m.facility_id = '${device_id}' OR\n    m.product_id = '${device_id}' OR\n    m.reason_enum_id = '${device_id}' OR\n    m.product_meter_id = '${device_id}' OR\n    m.asset_maintenance_id = '${device_id}'\n  )\nORDER BY 1, 2;",
+          "refId": "A"
+        }
+      ],
+      "title": "Measurement Series",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "moqui-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 16,
+        "y": 25
+      },
+      "id": 22,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "moqui-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT DISTINCT ON (metric)\n  metric AS \"Series\",\n  measurement_date AS \"Observed\",\n  measurement_value AS \"Value\"\nFROM (\n  SELECT\n    m.measurement_date,\n    m.measurement_value,\n    CONCAT_WS(' / ', m.measurement_type_id, COALESCE(m.work_effort_id, m.asset_id, m.facility_id, m.product_id, m.reason_enum_id, m.product_meter_id, m.asset_maintenance_id, 'unscoped')) AS metric\n  FROM measurement m\n  WHERE $__timeFilter(m.measurement_date)\n    AND (\n      m.work_effort_id = '${device_id}' OR\n      m.asset_id = '${device_id}' OR\n      m.facility_id = '${device_id}' OR\n      m.product_id = '${device_id}' OR\n      m.reason_enum_id = '${device_id}' OR\n      m.product_meter_id = '${device_id}' OR\n      m.asset_maintenance_id = '${device_id}'\n    )\n) latest\nORDER BY metric, measurement_date DESC;",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest Measurements",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 30,
+      "panels": [],
+      "title": "DeviceLog",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "moqui-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 16,
+        "x": 0,
+        "y": 36
+      },
+      "id": 31,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "moqui-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  observed_date AS \"Observed\",\n  sequence_num AS \"Seq\",\n  device_id AS \"Device\",\n  payload AS \"Payload\"\nFROM device_log\nWHERE device_id = '${device_id}'\n  AND $__timeFilter(observed_date)\nORDER BY observed_date DESC\nLIMIT 200;",
+          "refId": "A"
+        }
+      ],
+      "title": "DeviceLog Table",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "moqui-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 16,
+        "y": 36
+      },
+      "id": 32,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "moqui-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  DATE_TRUNC('hour', observed_date) AS \"Hour\",\n  COUNT(*) AS \"Events\"\nFROM device_log\nWHERE device_id = '${device_id}'\n  AND $__timeFilter(observed_date)\nGROUP BY 1\nORDER BY 1 DESC;",
+          "refId": "A"
+        }
+      ],
+      "title": "DeviceLog Volume",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "light",
+  "tags": [
+    "moqui",
+    "device",
+    "telemetry"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "test-gateway-1",
+          "value": "test-gateway-1"
+        },
+        "hide": 0,
+        "label": "Device ID",
+        "name": "device_id",
+        "options": [],
+        "query": "test-gateway-1",
+        "skipUrlSync": false,
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Device Telemetry",
+  "uid": "device-telemetry",
+  "version": 2,
+  "weekStart": ""
+}

@@ -1,0 +1,33 @@
+# Grafana Docker Compose for use with a native Moqui instance running on the host.
+#
+# Typical workflow:
+#   1. Start native Moqui from your moqui-framework checkout with: ./gradlew run
+#   2. From industrial/ start Grafana only with:
+#      docker compose -f grafana-compose.yml up -d
+#
+# Moqui reaches Grafana through http://127.0.0.1:3000 using the GrafanaProxy
+# servlet configured in MoquiDefaultConf.xml.
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-native
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:3000:3000
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+      - ./grafana/datasource/datasource-compose.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - ./grafana/provisioning/dashboards/default.yml:/etc/grafana/provisioning/dashboards/default.yml:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_SECURITY_COOKIE_SAMESITE=none
+      - GF_SECURITY_COOKIE_SECURE=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_ENABLE_GZIP=true
+      - GF_USERS_DEFAULT_THEME=light
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
