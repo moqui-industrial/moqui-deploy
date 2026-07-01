@@ -1,0 +1,14 @@
+# VM 2 - Moqui telemetry TimescaleDB database.
+# Install with:
+#   replace /absolute/path/to/moqui-framework/docker and install with crontab
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MOQUI_DOCKER_DIR=/absolute/path/to/moqui-framework/docker
+CONFIG_FILE=$MOQUI_DOCKER_DIR/postgres-backup/config/backup.moqui-log.env
+
+# Retention authority: pgBackRest repo1-retention-full=2.
+# With one full per day, this gives approximately 2 active full chains.
+00 03 * * * cd $MOQUI_DOCKER_DIR && ./postgres-backup/scripts/backup_pgbackrest.sh full
+30 11,23 * * * cd $MOQUI_DOCKER_DIR && ./postgres-backup/scripts/backup_pgbackrest.sh incr
+45 08 * * * cd $MOQUI_DOCKER_DIR && ./postgres-backup/scripts/check_backup_status.sh

@@ -1,0 +1,42 @@
+# PostgreSQL database-only compose file for the Moqui production database.
+#
+# Run from the moqui-framework/docker directory with:
+#   docker compose -f postgres-compose.yml -p moqui up -d --build
+#
+# This follows the database-only style of the standard Moqui docker compose files
+# while adding pgBackRest and dedicated production data/config directories.
+
+services:
+  moqui-database:
+    build:
+      context: ./postgres-moqui
+    image: moqui-postgres-pgbackrest:18.3
+    container_name: moqui-database
+    restart: always
+    ports:
+      - 127.0.0.1:5433:5432
+    volumes:
+      - ./db/moqui-prod/postgresql:/var/lib/postgresql
+      - ./db/moqui-prod/config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./db/moqui-prod/config/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ./db/moqui-prod/pgbackrest/repo:/var/lib/pgbackrest
+    environment:
+      - POSTGRES_DB=moqui
+      - POSTGRES_DB_SCHEMA=public
+      - POSTGRES_USER=moqui
+      - POSTGRES_PASSWORD=moqui
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "${DOCKER_LOG_MAX_SIZE:-50m}"
+        max-file: "${DOCKER_LOG_MAX_FILE:-5}"
+    shm_size: "512mb"
+    mem_limit: "6g"
+    cpus: "2.0"

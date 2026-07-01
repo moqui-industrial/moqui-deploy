@@ -1,0 +1,10 @@
+/absolute/path/to/moqui-framework/docker/postgres-backup/var/log/*.log {
+    size 50M
+    rotate 10
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    su root root
+}

@@ -1,0 +1,13 @@
+# Example CIFS NAS mount for /etc/fstab.
+# Create credentials file first:
+#   install -m 600 -o root -g root /dev/null /etc/nas-credentials
+#   nano /etc/nas-credentials
+#
+# /etc/nas-credentials content:
+#   username=NAS_USER
+#   password=NAS_PASSWORD
+#   domain=OPTIONAL_DOMAIN
+#
+# Replace NAS_IP_OR_DNS and backup_share.
+
+//NAS_IP_OR_DNS/backup_share /mnt/backup_nas cifs credentials=/etc/nas-credentials,uid=1000,gid=1000,iocharset=utf8,vers=3.0,x-systemd.automount,x-systemd.idle-timeout=60,x-systemd.mount-timeout=30,_netdev,nofail 0 0

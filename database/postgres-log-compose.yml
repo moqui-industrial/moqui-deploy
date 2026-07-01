@@ -1,0 +1,43 @@
+# PostgreSQL/TimescaleDB database-only compose file for Moqui telemetry data.
+#
+# Run from the moqui-framework/docker directory with:
+#   docker compose -f postgres-log-compose.yml -p moqui-log up -d --build
+#
+# This mirrors the database-only Moqui compose style while adding
+# TimescaleDB, pgBackRest, and dedicated production data/config directories.
+
+services:
+  moqui-log-database:
+    build:
+      context: ./postgres-moqui-log
+    image: moqui-timescaledb-pgbackrest:2.26.2-pg18
+    container_name: moqui-log-database
+    restart: always
+    ports:
+      - 127.0.0.1:5434:5432
+    volumes:
+      - ./db/moqui-log/postgresql:/var/lib/postgresql
+      - ./db/moqui-log/config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./db/moqui-log/config/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ./db/moqui-log/pgbackrest/repo:/var/lib/pgbackrest
+      - ./postgres-moqui-log/initdb:/docker-entrypoint-initdb.d:ro
+    environment:
+      - POSTGRES_DB=moqui_log
+      - POSTGRES_DB_SCHEMA=public
+      - POSTGRES_USER=moqui
+      - POSTGRES_PASSWORD=moqui
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "${DOCKER_LOG_MAX_SIZE:-50m}"
+        max-file: "${DOCKER_LOG_MAX_FILE:-5}"
+    shm_size: "1gb"
+    mem_limit: "16g"
+    cpus: "4.0"

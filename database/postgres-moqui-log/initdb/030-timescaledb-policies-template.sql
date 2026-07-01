@@ -1,0 +1,11 @@
+-- Optional TimescaleDB policy template.
+-- Enable only after replacing table/column names with the real Moqui telemetry table.
+--
+-- Example:
+-- SELECT create_hypertable('device_telemetry', 'recorded_at', if_not_exists => TRUE);
+-- ALTER TABLE device_telemetry SET (
+--   timescaledb.compress,
+--   timescaledb.compress_segmentby = 'device_id'
+-- );
+-- SELECT add_compression_policy('device_telemetry', INTERVAL '12 hours', if_not_exists => TRUE);
+-- SELECT add_retention_policy('device_telemetry', INTERVAL '1 day', if_not_exists => TRUE);
