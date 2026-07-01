@@ -149,7 +149,7 @@ services:
       SERVER_REWRITEBASEPATH: "true"
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:13.1.0
     container_name: grafana
     restart: unless-stopped
     # ports:
@@ -159,6 +159,7 @@ services:
     # GrafanaProxy servlet at /grafana (authenticated through Moqui's GrafanaAuthFilter).
     volumes:
       - ./grafana/data:/var/lib/grafana
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
       - ./grafana/datasource/datasource-compose.yml:/etc/grafana/provisioning/datasources/datasource.yml
       - ./grafana/provisioning/dashboards/default.yml:/etc/grafana/provisioning/dashboards/default.yml:ro
       - ./grafana/dashboards:/etc/grafana/dashboards:ro

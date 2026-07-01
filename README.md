@@ -17,6 +17,11 @@ The `industrial/` profile also includes two Grafana usage modes:
 Both modes share the same dashboard set and the same `grafana/datasource/datasource-compose.yml`
 definition so there is only one local Grafana datasource configuration to maintain.
 
+The pinned Grafana container version for this profile is currently `13.1.0`.
+No AI-specific Grafana plugins are preinstalled by default in this deployment
+profile so the stack remains fully self-hosted and free of optional commercial
+assistant dependencies.
+
 ## Usage
 1. Fork it
 2. Remove what you don't want

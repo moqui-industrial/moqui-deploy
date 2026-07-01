@@ -43,6 +43,7 @@ multipass transfer yugabyte/bootstrap-run.sh node1:/home/ubuntu/deploy/yugabyte/
 multipass transfer activemq/artemis-start.sh node1:/home/ubuntu/deploy/activemq/
 multipass transfer activemq/broker.xml node1:/home/ubuntu/deploy/activemq/
 multipass transfer grafana/datasource/datasource.yml node1:/home/ubuntu/deploy/grafana/datasource/
+multipass transfer grafana/grafana.ini node1:/home/ubuntu/deploy/grafana/
 multipass transfer device-gateway/gateway-mqtt.properties node1:/home/ubuntu/deploy/device-gateway/
 
 multipass transfer nginx/nginx-stack.conf node1:/home/ubuntu/deploy/nginx/
@@ -120,6 +121,7 @@ multipass exec node1 -- bash -c "cd /home/ubuntu/deploy && \
     docker config create yb_start_node ./yugabyte/yb-start.sh && \
     docker config create bootstrap_run ./yugabyte/bootstrap-run.sh && \
     docker config create bootstrap ./yugabyte/bootstrap.sh && \
+    docker config create grafana_ini ./grafana/grafana.ini && \
     docker config create grafana_datasource ./grafana/datasource/datasource.yml && \
     docker config create artemis_start ./activemq/artemis-start.sh && \
     docker config create artemis_xml ./activemq/broker.xml && \

@@ -6,3 +6,12 @@ This directory is mounted to `/var/lib/grafana` by:
 
 Keep the directory in the repository so Docker bind mounts always have a target.
 Do not commit generated Grafana runtime files from local executions.
+
+This is also where Grafana persists:
+- dashboard state created from the UI
+- SQLite metadata in `grafana.db`
+- any runtime plugin files downloaded by the local container
+
+The deployment profile does not preinstall Grafana AI plugins by default.
+If they are tested locally, remove their runtime directories from this bind
+mount before committing repository changes.

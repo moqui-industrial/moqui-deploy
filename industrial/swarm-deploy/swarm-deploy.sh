@@ -132,6 +132,7 @@ run_ssh ${node1} "cd ~/deploy && \
     docker config create yb_start_node ./yugabyte/yb-start.sh && \
     docker config create bootstrap_run ./yugabyte/bootstrap-run.sh && \
     docker config create bootstrap ./yugabyte/bootstrap.sh && \
+    docker config create grafana_ini ./grafana/grafana.ini && \
     docker config create grafana_datasource ./grafana/datasource/datasource.yml && \
     docker config create artemis_start ./activemq/artemis-start.sh && \
     docker config create artemis_xml ./activemq/broker.xml && \
