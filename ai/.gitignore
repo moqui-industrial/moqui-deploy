@@ -1,6 +1,10 @@
 librechat/db/
+librechat/db/**
 librechat/logs/
+librechat/logs/**
 librechat/images/
+librechat/images/**
 opensearch/data/
+opensearch/data/**
 opensearch/logs/*
 !opensearch/logs/README
