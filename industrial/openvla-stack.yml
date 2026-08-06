@@ -1,0 +1,96 @@
+#
+# This software is in the public domain under CC0 1.0 Universal plus a
+# Grant of Patent License.
+#
+# To the extent possible under law, the author(s) have dedicated all
+# copyright and related and neighboring rights to this software to the
+# public domain worldwide. This software is distributed without any
+# warranty.
+#
+# You should have received a copy of the CC0 Public Domain Dedication
+# along with this software (see the LICENSE.md file). If not, see
+# <http://creativecommons.org/publicdomain/zero/1.0/>.
+#
+# A Docker Swarm stack for an OpenVLA REST service callable from Moqui
+# services type="remote-rest".
+#
+# Build and publish the image before deployment:
+#   docker build -t ghcr.io/moqui/moqui-openvla:latest ./openvla
+#   docker push ghcr.io/moqui/moqui-openvla:latest
+#
+# Create secrets:
+#   printf '<huggingface_token>' | docker secret create openvla_hf_token -
+#   printf 'change-me' | docker secret create openvla_api_token -
+#
+# Create configs:
+#   docker config create openvla_env ./openvla/openvla.env
+#
+# Create external replicated/shared model cache volume:
+#   docker volume create openvla-models
+#
+# Deploy:
+#   docker stack deploy -c openvla-stack.yml moqui-openvla
+
+networks:
+  servernet: { external: true }
+
+secrets:
+  openvla_hf_token: { external: true }
+  openvla_api_token: { external: true }
+
+configs:
+  openvla_env: { external: true }
+
+volumes:
+  openvla-models: { external: true }
+
+services:
+  openvla:
+    image: ${OPENVLA_IMAGE:-ghcr.io/moqui/moqui-openvla:latest}
+    networks: [servernet]
+    secrets:
+      - openvla_hf_token
+      - openvla_api_token
+    configs:
+      - source: openvla_env
+        target: /opt/openvla/config/openvla.env
+    volumes:
+      - openvla-models:/models/huggingface
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - OPENVLA_MODEL_ID=${OPENVLA_MODEL_ID:-openvla/openvla-7b}
+      - OPENVLA_DEVICE=${OPENVLA_DEVICE:-cuda:0}
+      - OPENVLA_TORCH_DTYPE=${OPENVLA_TORCH_DTYPE:-bfloat16}
+      - OPENVLA_ATTN_IMPLEMENTATION=${OPENVLA_ATTN_IMPLEMENTATION:-flash_attention_2}
+      - OPENVLA_UNNORM_KEY=${OPENVLA_UNNORM_KEY:-bridge_orig}
+      - OPENVLA_PORT=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/readyz"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 240s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.gpu_node == true
+      update_config:
+        parallelism: 1
+        delay: 20s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        window: 180s
+      resources:
+        limits:
+          memory: 24G
+        reservations:
+          memory: 12G

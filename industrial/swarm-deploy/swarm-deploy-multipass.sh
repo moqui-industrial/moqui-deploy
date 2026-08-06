@@ -1,4 +1,16 @@
 #!/usr/bin/env bash
+#
+# This software is in the public domain under CC0 1.0 Universal plus a
+# Grant of Patent License.
+#
+# To the extent possible under law, the author(s) have dedicated all
+# copyright and related and neighboring rights to this software to the
+# public domain worldwide. This software is distributed without any
+# warranty.
+#
+# You should have received a copy of the CC0 Public Domain Dedication
+# along with this software (see the LICENSE.md file). If not, see
+# <http://creativecommons.org/publicdomain/zero/1.0/>.
 set -euo pipefail
 
 # Multipass installation (uncomment if needed)
@@ -30,6 +42,7 @@ multipass exec node1 -- mkdir -p /home/ubuntu/deploy/yugabyte
 multipass exec node1 -- mkdir -p /home/ubuntu/deploy/activemq
 multipass exec node1 -- mkdir -p /home/ubuntu/deploy/grafana/datasource
 multipass exec node1 -- mkdir -p /home/ubuntu/deploy/device-gateway
+multipass exec node1 -- mkdir -p /home/ubuntu/deploy/openvla
 
 multipass transfer nginx-stack.yml node1:/home/ubuntu/deploy/
 multipass transfer moqui-stack.yml node1:/home/ubuntu/deploy/
@@ -37,6 +50,7 @@ multipass transfer opensearch-stack.yml node1:/home/ubuntu/deploy/
 multipass transfer activemq-stack.yml node1:/home/ubuntu/deploy/
 multipass transfer yugabyte-stack.yml node1:/home/ubuntu/deploy/
 multipass transfer device-gateway-stack.yml node1:/home/ubuntu/deploy/
+multipass transfer openvla-stack.yml node1:/home/ubuntu/deploy/
 multipass transfer yugabyte/yb-start.sh node1:/home/ubuntu/deploy/yugabyte/
 multipass transfer yugabyte/bootstrap.sh node1:/home/ubuntu/deploy/yugabyte/
 multipass transfer yugabyte/bootstrap-run.sh node1:/home/ubuntu/deploy/yugabyte/
@@ -45,6 +59,7 @@ multipass transfer activemq/broker.xml node1:/home/ubuntu/deploy/activemq/
 multipass transfer grafana/datasource/datasource.yml node1:/home/ubuntu/deploy/grafana/datasource/
 multipass transfer grafana/grafana.ini node1:/home/ubuntu/deploy/grafana/
 multipass transfer device-gateway/gateway-mqtt.properties node1:/home/ubuntu/deploy/device-gateway/
+multipass transfer openvla/openvla.env node1:/home/ubuntu/deploy/openvla/
 
 multipass transfer nginx/nginx-stack.conf node1:/home/ubuntu/deploy/nginx/
 multipass transfer nginx/moqui-stack.conf node1:/home/ubuntu/deploy/nginx/
@@ -87,6 +102,7 @@ multipass exec node1 -- docker node update \
     --label-add search_node2=true \
     --label-add grafana_node=true \
     --label-add gateway_node=true \
+    --label-add gpu_node=true \
     node2
 multipass exec node1 -- docker node update \
     --label-add edge_node=true \
@@ -106,6 +122,7 @@ done
 echo "Creating external docker volumes"
 multipass exec node1 -- docker volume create moqui-gateway-data
 multipass exec node1 -- docker volume create moqui-gateway-logs
+multipass exec node1 -- docker volume create openvla-models
 
 echo "Creating overlay networks"
 multipass exec node1 -- docker network create --driver overlay --attachable dbnet
@@ -143,7 +160,10 @@ multipass exec node1 -- bash -c "cd /home/ubuntu/deploy && \
     printf 'cluster' | docker secret create artemis_cluster_user - && \
     printf 'cluster' | docker secret create artemis_cluster_password - && \
     printf 'change-me' | docker secret create gateway_api_token - && \
-    docker config create device_gateway_config ./device-gateway/gateway-mqtt.properties"
+    printf 'change-me' | docker secret create openvla_api_token - && \
+    printf '' | docker secret create openvla_hf_token - && \
+    docker config create device_gateway_config ./device-gateway/gateway-mqtt.properties && \
+    docker config create openvla_env ./openvla/openvla.env"
 
 echo "Deploying Swarm stacks"
 multipass exec node1 -- bash -c "cd /home/ubuntu/deploy && docker stack deploy -c yugabyte-stack.yml moqui-db"
@@ -159,6 +179,7 @@ multipass exec node1 -- bash -c "cd /home/ubuntu/deploy && docker stack deploy -
 multipass exec node1 -- bash -c "cd /home/ubuntu/deploy && docker stack deploy -c nginx-stack.yml moqui-edge"
 echo "Using GATEWAY_DEVICE_ID=${GATEWAY_DEVICE_ID} for moqui-device-gateway"
 multipass exec node1 -- bash -c "cd /home/ubuntu/deploy && export GATEWAY_DEVICE_ID='${GATEWAY_DEVICE_ID}' && docker stack deploy -c device-gateway-stack.yml moqui-gateway"
+multipass exec node1 -- bash -c "cd /home/ubuntu/deploy && docker stack deploy -c openvla-stack.yml moqui-openvla"
 
 # Check services
 multipass exec node1 -- docker stack services moqui-db
@@ -167,6 +188,7 @@ multipass exec node1 -- docker stack services moqui-broker
 multipass exec node1 -- docker stack services moqui
 multipass exec node1 -- docker stack services moqui-edge
 multipass exec node1 -- docker stack services moqui-gateway
+multipass exec node1 -- docker stack services moqui-openvla
 
 echo "Deployment complete."
 

@@ -1,4 +1,16 @@
 #!/usr/bin/env bash
+#
+# This software is in the public domain under CC0 1.0 Universal plus a
+# Grant of Patent License.
+#
+# To the extent possible under law, the author(s) have dedicated all
+# copyright and related and neighboring rights to this software to the
+# public domain worldwide. This software is distributed without any
+# warranty.
+#
+# You should have received a copy of the CC0 Public Domain Dedication
+# along with this software (see the LICENSE.md file). If not, see
+# <http://creativecommons.org/publicdomain/zero/1.0/>.
 set -euo pipefail
 
 if [ "$#" -ne 5 ]; then
@@ -51,7 +63,7 @@ echo "Installing Docker on nodes"
 # sleep 60
 
 echo "Transferring deployment files to node1"
-run_ssh ${node1} "mkdir -p ~/deploy/nginx/certs ~/deploy/yugabyte ~/deploy/activemq ~/deploy/device-gateway"
+run_ssh ${node1} "mkdir -p ~/deploy/nginx/certs ~/deploy/yugabyte ~/deploy/activemq ~/deploy/device-gateway ~/deploy/openvla"
 run_scp "*.yml" "${node1}:~/deploy/"
 run_scp "yugabyte" "${node1}:~/deploy/"
 run_scp "grafana" "${node1}:~/deploy/"
@@ -60,6 +72,7 @@ run_scp "activemq/broker.xml" "${node1}:~/deploy/activemq/"
 run_scp "nginx/*.conf" "${node1}:~/deploy/nginx/"
 run_scp "nginx/certs/*.pem" "${node1}:~/deploy/nginx/certs/"
 run_scp "device-gateway/gateway-mqtt.properties" "${node1}:~/deploy/device-gateway/"
+run_scp "openvla/openvla.env" "${node1}:~/deploy/openvla/"
 
 # Example output:
 #     Swarm initialized: current node (aowkrt21qx3tk7ordgdpqf1h7) is now a manager.
@@ -97,6 +110,7 @@ run_ssh ${node1} "docker node update \
     --label-add search_node2=true \
     --label-add grafana_node=true \
     --label-add gateway_node=true \
+    --label-add gpu_node=true \
     ${node2_name}"
 
 run_ssh ${node1} "docker node update \
@@ -117,6 +131,7 @@ done
 echo "Creating external docker volumes"
 run_ssh ${node1} "docker volume create moqui-gateway-data"
 run_ssh ${node1} "docker volume create moqui-gateway-logs"
+run_ssh ${node1} "docker volume create openvla-models"
 
 echo "Creating overlay networks"
 run_ssh ${node1} "docker network create --driver overlay --attachable dbnet"
@@ -154,7 +169,10 @@ run_ssh ${node1} "cd ~/deploy && \
     printf 'cluster' | docker secret create artemis_cluster_user - && \
     printf 'cluster' | docker secret create artemis_cluster_password - && \
     printf 'change-me' | docker secret create gateway_api_token - && \
-    docker config create device_gateway_config ./device-gateway/gateway-mqtt.properties"
+    printf 'change-me' | docker secret create openvla_api_token - && \
+    printf '' | docker secret create openvla_hf_token - && \
+    docker config create device_gateway_config ./device-gateway/gateway-mqtt.properties && \
+    docker config create openvla_env ./openvla/openvla.env"
 
 echo "Deploying Swarm stacks"
 echo "Using GATEWAY_DEVICE_ID=${GATEWAY_DEVICE_ID} for moqui-device-gateway"
@@ -167,6 +185,7 @@ sleep 10
 run_ssh ${node1} "cd ~/deploy && docker stack deploy -c moqui-stack.yml moqui"
 run_ssh ${node1} "cd ~/deploy && docker stack deploy -c nginx-stack.yml moqui-edge"
 run_ssh ${node1} "cd ~/deploy && export GATEWAY_DEVICE_ID='${GATEWAY_DEVICE_ID}' && docker stack deploy -c device-gateway-stack.yml moqui-gateway"
+run_ssh ${node1} "cd ~/deploy && docker stack deploy -c openvla-stack.yml moqui-openvla"
 
 # Check services
 run_ssh ${node1} "docker stack services moqui-db"
@@ -175,5 +194,6 @@ run_ssh ${node1} "docker stack services moqui-broker"
 run_ssh ${node1} "docker stack services moqui"
 run_ssh ${node1} "docker stack services moqui-edge"
 run_ssh ${node1} "docker stack services moqui-gateway"
+run_ssh ${node1} "docker stack services moqui-openvla"
 
 echo "Deployment complete"

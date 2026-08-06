@@ -1,0 +1,72 @@
+#
+# This software is in the public domain under CC0 1.0 Universal plus a
+# Grant of Patent License.
+#
+# To the extent possible under law, the author(s) have dedicated all
+# copyright and related and neighboring rights to this software to the
+# public domain worldwide. This software is distributed without any
+# warranty.
+#
+# You should have received a copy of the CC0 Public Domain Dedication
+# along with this software (see the LICENSE.md file). If not, see
+# <http://creativecommons.org/publicdomain/zero/1.0/>.
+#
+# A Docker Compose application for an OpenVLA REST service that Moqui can call
+# through services type="remote-rest".
+#
+# Start:
+#   docker compose -f openvla-compose.yml -p moqui-ai up -d --build
+#
+# Health checks:
+#   curl http://localhost:8000/healthz
+#   curl http://localhost:8000/readyz
+#
+# Example invocation from a client:
+#   curl -X POST http://localhost:8000/act \
+#     -H 'Content-Type: application/json' \
+#     -H 'X-API-Key: change-me' \
+#     -d '{"instruction":"pick up the red block","image_base64":"<BASE64>"}'
+#
+# Moqui remote-rest example:
+#   location = http://openvla:8000/act
+#   method   = POST
+#   headers  = Content-Type: application/json, X-API-Key: <token>
+
+services:
+  openvla:
+    container_name: moqui-openvla
+    build:
+      context: ./openvla
+    image: ${OPENVLA_IMAGE:-moqui-openvla:local}
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:${OPENVLA_PORT:-8000}:8000
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - OPENVLA_MODEL_ID=${OPENVLA_MODEL_ID:-openvla/openvla-7b}
+      - OPENVLA_DEVICE=${OPENVLA_DEVICE:-cuda:0}
+      - OPENVLA_TORCH_DTYPE=${OPENVLA_TORCH_DTYPE:-bfloat16}
+      - OPENVLA_ATTN_IMPLEMENTATION=${OPENVLA_ATTN_IMPLEMENTATION:-flash_attention_2}
+      - OPENVLA_UNNORM_KEY=${OPENVLA_UNNORM_KEY:-bridge_orig}
+      - OPENVLA_API_TOKEN=${OPENVLA_API_TOKEN:-change-me}
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
+      - HF_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
+    volumes:
+      - openvla-models:/models/huggingface
+      - ./openvla/openvla.env:/opt/openvla/config/openvla.env:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/readyz"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+    gpus: all
+    networks:
+      - moqui_default
+
+volumes:
+  openvla-models:
+
+networks:
+  moqui_default:
+    external: true
