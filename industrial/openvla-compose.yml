@@ -26,6 +26,10 @@
 #     -H 'Content-Type: application/json' \
 #     -H 'X-API-Key: change-me' \
 #     -d '{"instruction":"pick up the red block","image_base64":"<BASE64>"}'
+#   curl -X POST http://localhost:8000/ground \
+#     -H 'Content-Type: application/json' \
+#     -H 'X-API-Key: change-me' \
+#     -d '{"instruction":"red block","image_base64":"<BASE64>","return_target_pose":true}'
 #
 # Moqui remote-rest example:
 #   location = http://openvla:8000/act
@@ -48,6 +52,14 @@ services:
       - OPENVLA_TORCH_DTYPE=${OPENVLA_TORCH_DTYPE:-bfloat16}
       - OPENVLA_ATTN_IMPLEMENTATION=${OPENVLA_ATTN_IMPLEMENTATION:-flash_attention_2}
       - OPENVLA_UNNORM_KEY=${OPENVLA_UNNORM_KEY:-bridge_orig}
+      - OPENVLA_GROUNDING_MODEL_ID=${OPENVLA_GROUNDING_MODEL_ID:-google/owlv2-base-patch16-ensemble}
+      - OPENVLA_GROUNDING_DEVICE=${OPENVLA_GROUNDING_DEVICE:-cuda:0}
+      - OPENVLA_GROUNDING_BOX_THRESHOLD=${OPENVLA_GROUNDING_BOX_THRESHOLD:-0.12}
+      - OPENVLA_GROUNDING_TEXT_THRESHOLD=${OPENVLA_GROUNDING_TEXT_THRESHOLD:-0.10}
+      - OPENVLA_GROUNDING_MAX_LABELS=${OPENVLA_GROUNDING_MAX_LABELS:-8}
+      - OPENVLA_TARGET_POSE_DEFAULTS=${OPENVLA_TARGET_POSE_DEFAULTS:-0,0,0,0,0,0}
+      - OPENVLA_TARGET_POSE_SCALE=${OPENVLA_TARGET_POSE_SCALE:-1,1,1,0,0,0}
+      - OPENVLA_TARGET_POSE_BIAS=${OPENVLA_TARGET_POSE_BIAS:-0,0,0,0,0,0}
       - OPENVLA_API_TOKEN=${OPENVLA_API_TOKEN:-change-me}
       - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
       - HF_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
