@@ -72,6 +72,9 @@ services:
       # Gemini/Google endpoint support.
       - GOOGLE_KEY=${LIBRECHAT_GOOGLE_KEY:-}
       - GOOGLE_MODELS=${LIBRECHAT_GOOGLE_MODELS:-gemini-2.5-flash,gemini-2.5-pro}
+      # Direct OpenAI-compatible providers.
+      - DEEPSEEK_API_KEY=${LIBRECHAT_DEEPSEEK_API_KEY:-}
+      - MOONSHOT_API_KEY=${LIBRECHAT_MOONSHOT_API_KEY:-}
       # Prevent LibreChat from treating Moqui's plain 401 (no Bearer challenge) as OAuth-required.
       # The OAuth detection probe runs without admin headers, so Moqui's 401 would otherwise
       # flip requiresOAuth=true and skip the admin Basic auth header entirely.

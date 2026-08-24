@@ -18,19 +18,26 @@ endpoints:
   openAI:
     titleConvo: true
     titleModel: "gpt-4o-mini"
+  anthropic:
+    titleConvo: true
   google:
     titleConvo: true
   custom:
-    - name: "anthropic"
-      provider: "anthropic"
-      apiKey: "${LIBRECHAT_ANTHROPIC_API_KEY}"
-      baseURL: "https://api.anthropic.com"
-      headers:
-        anthropic-version: "2023-06-01"
+    - name: "DeepSeek"
+      apiKey: "${DEEPSEEK_API_KEY}"
+      baseURL: "https://api.deepseek.com/v1"
       models:
         default:
-          - "claude-sonnet-4-5"
-          - "claude-opus-4-5"
+          - "deepseek-chat"
+          - "deepseek-reasoner"
+        fetch: false
+    - name: "Kimi"
+      apiKey: "${MOONSHOT_API_KEY}"
+      baseURL: "https://api.moonshot.ai/v1"
+      models:
+        default:
+          - "moonshot-v1-8k"
+          - "moonshot-v1-32k"
         fetch: false
 
 # MCP domain allowlist — required to permit host.docker.internal (private IP).
