@@ -8,5 +8,15 @@ opensearch/data/
 opensearch/data/**
 opensearch/logs/*
 !opensearch/logs/README
+logs/
+logs/**
+ollama/
+ollama/**
+ollama-home/
+ollama-home/**
+ollama-home-*/
+ollama-home-*/**
+ollama-local/
+ollama-local/**
 .env
 .env.*

@@ -12,16 +12,16 @@
 #
 # Moqui proxy config (defaults already set in moqui-mcp MoquiConf.xml):
 #   librechat_host=127.0.0.1
-#   librechat_port=3080
+#   librechat_port=3081
 #
 # LibreChat direct (bypass Moqui proxy):
-#   http://127.0.0.1:3080
+#   http://127.0.0.1:3081
 #
 # LibreChat through Moqui proxy (requires LibreChatRemote permission):
-#   http://localhost:8080/librechat/
+#   http://localhost:8081/librechat/
 #
 # LibreChat screen in Moqui UI:
-#   http://localhost:8080/LibreChat
+#   http://localhost:8081/LibreChat
 #
 # MCP connection from LibreChat to Moqui:
 #   See ai/librechat/librechat.yaml for mcpServers config.
@@ -36,17 +36,27 @@ services:
       moqui-librechat-db:
         condition: service_healthy
     ports:
-      - 127.0.0.1:3080:3080
+      - 127.0.0.1:3081:3080
     volumes:
       - ./librechat/librechat.yaml:/app/librechat.yaml:ro
       - ./librechat/images:/app/client/public/images
       - ./librechat/logs:/app/api/logs
+      # Bind mount (not a named volume): same host path LibreChat writes
+      # uploads into (fileStrategy: local, see ai/librechat/librechat.yaml)
+      # and the one Moqui's cyber_attach_product_content /
+      # cyber_attach_product_family_content MCP tools read sourceFilePath
+      # from (moqui-cybersecurity-agent/service/org/moqui/cyber/
+      # CyberProductContentServices.xml) - no copy step, both sides see the
+      # identical absolute host path.
+      - ./librechat/uploads:/app/uploads
     extra_hosts:
       # allows LibreChat inside Docker to reach Moqui running on the host
       - "host.docker.internal:host-gateway"
     environment:
       - HOST=0.0.0.0
       - PORT=3080
+      - DOMAIN_CLIENT=http://localhost:8081/librechat
+      - DOMAIN_SERVER=http://localhost:3081
       - MONGO_URI=mongodb://moqui-librechat-db:27017/LibreChat
       - JWT_SECRET=${LIBRECHAT_JWT_SECRET:-moqui-librechat-jwt-dev-secret-changeme}
       - JWT_REFRESH_SECRET=${LIBRECHAT_JWT_REFRESH_SECRET:-moqui-librechat-refresh-dev-secret-changeme}
@@ -55,15 +65,18 @@ services:
       - SESSION_EXPIRY=900000
       - REFRESH_TOKEN_EXPIRY=604800000
       - NO_INDEX=true
-      - APP_BASE_PATH=/librechat
-      # Set OPENAI_API_KEY in the host shell or in a .env file next to this compose file.
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Anthropic/Claude key used by librechat.yaml custom endpoint "anthropic".
+      - LIBRECHAT_ANTHROPIC_API_KEY=${LIBRECHAT_ANTHROPIC_API_KEY:-}
       # Prevent LibreChat from treating Moqui's plain 401 (no Bearer challenge) as OAuth-required.
       # The OAuth detection probe runs without admin headers, so Moqui's 401 would otherwise
       # flip requiresOAuth=true and skip the admin Basic auth header entirely.
       - MCP_OAUTH_ON_AUTH_ERROR=false
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:3080/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://localhost:3080/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\"",
+        ]
       interval: 15s
       timeout: 10s
       retries: 10

@@ -1,22 +1,54 @@
 # LibreChat configuration for Moqui integration.
 # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/custom_config
-version: 1.2.1
+version: 1.3.11
 cache: true
+
+# Local file storage (not S3/Firebase/Azure) - writes uploads to /app/uploads
+# inside the container, bind-mounted to ./librechat/uploads on the host
+# (librechat-compose.yml) so Moqui's cyber_attach_product_content /
+# cyber_attach_product_family_content MCP tools (moqui-cybersecurity-agent
+# component) can read the same file by its host path, no copy step.
+# Without this, LibreChat's default upload handling for file-capable models
+# can hand the file to the provider's own file API instead (observed: GPT-4.1
+# expecting the file at /mnt/data, its own Code Interpreter sandbox - not
+# reachable by any Moqui-side tool).
+fileStrategy: "local"
+
+endpoints:
+  custom:
+    - name: "anthropic"
+      provider: "anthropic"
+      apiKey: "${LIBRECHAT_ANTHROPIC_API_KEY}"
+      baseURL: "https://api.anthropic.com"
+      headers:
+        anthropic-version: "2023-06-01"
+      models:
+        default:
+          - "claude-sonnet-4-5"
+          - "claude-opus-4-5"
+        fetch: false
 
 # MCP domain allowlist — required to permit host.docker.internal (private IP).
 # Without this, LibreChat's SSRF protection blocks all private-IP MCP servers.
 mcpSettings:
   allowedDomains:
-    - "http://host.docker.internal:8080"
+    - "http://host.docker.internal:8081"
 
 # MCP server configuration — Moqui MCP integration.
-# LibreChat reaches Moqui on the host via host.docker.internal:8080.
+# LibreChat reaches Moqui on the host via host.docker.internal:8081.
 # Authorization: Basic base64(john.doe:moqui) — replace with a dedicated MCP user in production.
 mcpServers:
   moqui:
     type: streamable-http
-    url: "http://host.docker.internal:8080/mcp/message"
+    url: "http://host.docker.internal:8081/mcp"
     headers:
+      Accept: "application/json, text/event-stream"
       Authorization: "Basic am9obi5kb2U6bW9xdWk="
-    timeout: 30000
-    initTimeout: 10000
+      # Force the prompt-first profile so LibreChat sees only the compact helper
+      # toolset instead of the full Moqui service catalog.
+      X-Moqui-Mcp-Profile: "librechat"
+      # LibreChat 0.8.6 still initializes MCP streamable-http using the 2025-11-25
+      # protocol value in the JSON body, so the header must match that body version.
+      MCP-Protocol-Version: "2025-11-25"
+    timeout: 60000
+    initTimeout: 30000
