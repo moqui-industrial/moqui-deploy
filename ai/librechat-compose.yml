@@ -65,8 +65,13 @@ services:
       - SESSION_EXPIRY=900000
       - REFRESH_TOKEN_EXPIRY=604800000
       - NO_INDEX=true
+      # OpenAI remains enabled as a primary provider for MCP prompt testing.
+      - OPENAI_API_KEY=${LIBRECHAT_OPENAI_API_KEY:-}
       # Anthropic/Claude key used by librechat.yaml custom endpoint "anthropic".
       - LIBRECHAT_ANTHROPIC_API_KEY=${LIBRECHAT_ANTHROPIC_API_KEY:-}
+      # Gemini/Google endpoint support.
+      - GOOGLE_KEY=${LIBRECHAT_GOOGLE_KEY:-}
+      - GOOGLE_MODELS=${LIBRECHAT_GOOGLE_MODELS:-gemini-2.5-flash,gemini-2.5-pro}
       # Prevent LibreChat from treating Moqui's plain 401 (no Bearer challenge) as OAuth-required.
       # The OAuth detection probe runs without admin headers, so Moqui's 401 would otherwise
       # flip requiresOAuth=true and skip the admin Basic auth header entirely.

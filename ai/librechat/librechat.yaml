@@ -15,6 +15,11 @@ cache: true
 fileStrategy: "local"
 
 endpoints:
+  openAI:
+    titleConvo: true
+    titleModel: "gpt-4o-mini"
+  google:
+    titleConvo: true
   custom:
     - name: "anthropic"
       provider: "anthropic"
