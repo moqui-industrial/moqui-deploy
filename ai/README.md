@@ -35,7 +35,7 @@ LibreChat reads provider keys from `ai/.env`:
 LIBRECHAT_OPENAI_API_KEY=your_openai_key
 LIBRECHAT_ANTHROPIC_API_KEY=your_claude_key
 LIBRECHAT_GOOGLE_KEY=your_gemini_key
-LIBRECHAT_GOOGLE_MODELS=gemini-2.5-flash,gemini-2.5-pro
+LIBRECHAT_GOOGLE_MODELS=gemini-3.6-flash
 LIBRECHAT_DEEPSEEK_API_KEY=your_deepseek_key
 LIBRECHAT_MOONSHOT_API_KEY=your_kimi_key
 ```

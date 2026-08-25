@@ -4,6 +4,8 @@ librechat/logs/
 librechat/logs/**
 librechat/images/
 librechat/images/**
+librechat/uploads/
+librechat/uploads/**
 opensearch/data/
 opensearch/data/**
 opensearch/logs/*

@@ -71,7 +71,7 @@ services:
       - LIBRECHAT_ANTHROPIC_API_KEY=${LIBRECHAT_ANTHROPIC_API_KEY:-}
       # Gemini/Google endpoint support.
       - GOOGLE_KEY=${LIBRECHAT_GOOGLE_KEY:-}
-      - GOOGLE_MODELS=${LIBRECHAT_GOOGLE_MODELS:-gemini-2.5-flash,gemini-2.5-pro}
+      - GOOGLE_MODELS=${LIBRECHAT_GOOGLE_MODELS:-gemini-3.6-flash}
       # Direct OpenAI-compatible providers.
       - DEEPSEEK_API_KEY=${LIBRECHAT_DEEPSEEK_API_KEY:-}
       - MOONSHOT_API_KEY=${LIBRECHAT_MOONSHOT_API_KEY:-}

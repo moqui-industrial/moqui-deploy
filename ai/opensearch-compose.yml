@@ -24,7 +24,7 @@ services:
     container_name: moqui-search
     restart: unless-stopped
     ports:
-      - 127.0.0.1:9200:9200
+      - 127.0.0.1:9202:9200
       - 127.0.0.1:9300:9300
     volumes:
       - ./opensearch/data:/usr/share/opensearch/data

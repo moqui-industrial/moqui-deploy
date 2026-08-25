@@ -8,8 +8,15 @@ node.name: moqui-search-node-1
 # For single-node local deployment
 discovery.type: single-node
 network.host: 0.0.0.0
-http.port: 9200
+http.port: 9202
 transport.port: 9300
+
+# Local dev stack: disable security so Moqui can create/update indices and
+# read/write runtime logs without needing an OpenSearch auth setup.
+plugins.security.disabled: true
+
+# Relax disk-watermark blocking for the local test environment.
+cluster.routing.allocation.disk.threshold_enabled: false
 
 # Optional: keep this in sync with RAG template settings
 # index.knn: true
