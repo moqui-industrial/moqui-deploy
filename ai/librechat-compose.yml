@@ -2,13 +2,13 @@
 # Provides the chat UI accessible through the Moqui proxy at /librechat/*.
 #
 # Start:
-#   docker compose -f ai/librechat-compose.yml -p moqui-ai up -d
+#   docker compose -f ai/librechat-compose.yml -p ai up -d
 #
 # Stop:
-#   docker compose -f ai/librechat-compose.yml -p moqui-ai down
+#   docker compose -f ai/librechat-compose.yml -p ai down
 #
 # Follow logs:
-#   docker compose -f ai/librechat-compose.yml -p moqui-ai logs -f moqui-librechat
+#   docker compose -f ai/librechat-compose.yml -p ai logs -f moqui-librechat
 #
 # Moqui proxy config (defaults already set in moqui-mcp MoquiConf.xml):
 #   librechat_host=127.0.0.1
@@ -29,7 +29,8 @@
 
 services:
   moqui-librechat:
-    image: ghcr.io/danny-avila/librechat:latest
+    # Pin the image verified with the legacy MCP compatibility adapter below.
+    image: ghcr.io/danny-avila/librechat:v0.8.7
     container_name: moqui-librechat
     restart: unless-stopped
     depends_on:
@@ -107,4 +108,6 @@ services:
 
 networks:
   default:
+    # The Moqui deployment owns this shared network; do not recreate it from the AI stack.
     name: moqui_default
+    external: true

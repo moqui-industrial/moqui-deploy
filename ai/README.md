@@ -26,7 +26,7 @@ The profile is intended for development and staging-style local validation, espe
 Start LibreChat:
 
 ```bash
-docker compose -f ai/librechat-compose.yml -p moqui-ai up -d
+docker compose -f ai/librechat-compose.yml -p ai up -d
 ```
 
 LibreChat reads provider keys from `ai/.env`:
@@ -49,7 +49,7 @@ docker compose -f ai/opensearch-compose.yml -p moqui-ai up -d --build
 Stop services:
 
 ```bash
-docker compose -f ai/librechat-compose.yml -p moqui-ai down
+docker compose -f ai/librechat-compose.yml -p ai down
 docker compose -f ai/opensearch-compose.yml -p moqui-ai down
 ```
 

@@ -44,23 +44,24 @@ endpoints:
 # Without this, LibreChat's SSRF protection blocks all private-IP MCP servers.
 mcpSettings:
   allowedDomains:
-    - "http://host.docker.internal:8081"
+    # LibreChat does not interpolate arbitrary environment variables in this file.
+    # Keep this origin aligned with the local Moqui test instance below.
+    - "http://host.docker.internal:8080"
 
 # MCP server configuration — Moqui MCP integration.
-# LibreChat reaches Moqui on the host via host.docker.internal:8081.
+# LibreChat reaches the local test Moqui process on port 8080 through Docker's host gateway.
+# Its MCP SDK currently speaks 2025-11-25; moqui-mcp enables a profile-scoped adapter.
 # Authorization: Basic base64(john.doe:moqui) — replace with a dedicated MCP user in production.
 mcpServers:
   moqui:
     type: streamable-http
-    url: "http://host.docker.internal:8081/mcp"
+    url: "http://host.docker.internal:8080/mcp"
     headers:
       Accept: "application/json, text/event-stream"
       Authorization: "Basic am9obi5kb2U6bW9xdWk="
-      # Force the prompt-first profile so LibreChat sees only the compact helper
-      # toolset instead of the full Moqui service catalog.
+      # Enables only the legacy protocol adapter; normal Moqui artifact authorization still applies.
       X-Moqui-Mcp-Profile: "librechat"
-      # LibreChat 0.8.6 still initializes MCP streamable-http using the 2025-11-25
-      # protocol value in the JSON body, so the header must match that body version.
-      MCP-Protocol-Version: "2025-11-25"
+      # Do not set MCP-Protocol-Version here: LibreChat's MCP SDK already sends it,
+      # and a second copy is merged into "2025-11-25, 2025-11-25", which Moqui rejects.
     timeout: 60000
     initTimeout: 30000
