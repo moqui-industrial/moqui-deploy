@@ -3,6 +3,25 @@
 version: 1.3.11
 cache: true
 
+interface:
+  # Artifacts/Generative UI
+  artifactUndocking: true
+  defaultPinnedTools:
+    - artifacts
+
+fileConfig:
+  serverFileSizeLimit: 100
+  fileTokenLimit: 150000
+  endpoints:
+    agents:
+      fileLimit: 10
+      fileSizeLimit: 50
+      supportedMimeTypes:
+        - "text/csv"
+        - "application/pdf"
+        - "image/jpeg"
+        - "image/png"
+
 # Local file storage (not S3/Firebase/Azure) - writes uploads to /app/uploads
 # inside the container, bind-mounted to ./librechat/uploads on the host
 # (librechat-compose.yml) so Moqui's cyber_attach_product_content /
@@ -15,9 +34,15 @@ cache: true
 fileStrategy: "local"
 
 endpoints:
+  agents:
+    capabilities:
+      - artifacts
+      - tools
+      - context
+      - skills
   openAI:
     titleConvo: true
-    titleModel: "gpt-4o-mini"
+    titleModel: "gpt-5"
   anthropic:
     titleConvo: true
   google:

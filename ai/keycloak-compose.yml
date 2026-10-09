@@ -1,0 +1,69 @@
+# Keycloak identity provider for the Moqui AI profile.
+#
+# Start:
+#   docker compose -f ai/keycloak-compose.yml -p ai up -d
+#
+# Administration console:
+#   http://127.0.0.1:8180
+#
+# The realm import creates the Moqui and LibreChat clients. Set all credentials
+# in ai/.env before the first start; neither this file nor the realm JSON stores
+# a production secret.
+services:
+  moqui-keycloak-db:
+    image: postgres:18.1
+    container_name: moqui-keycloak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD in ai/.env}
+    volumes:
+      - ./keycloak/postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  moqui-keycloak:
+    image: quay.io/keycloak/keycloak:26.4.1
+    container_name: moqui-keycloak
+    restart: unless-stopped
+    depends_on:
+      moqui-keycloak-db:
+        condition: service_healthy
+    command:
+      ["start-dev", "--import-realm", "--https-certificate-file=/opt/keycloak/conf/tls/keycloak.crt", "--https-certificate-key-file=/opt/keycloak/conf/tls/keycloak.key"]
+    ports:
+      - 8444:8443
+    volumes:
+      - ./keycloak/realm:/opt/keycloak/data/import:ro
+      - ./keycloak/tls:/opt/keycloak/conf/tls:ro
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://moqui-keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD in ai/.env}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD in ai/.env}
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      # Reachable as the same issuer from the host browser and LibreChat container.
+      KC_HOSTNAME: https://host.docker.internal:8444
+      # Realm import resolves these values without committing client credentials.
+      KEYCLOAK_MOQUI_CLIENT_SECRET: ${KEYCLOAK_MOQUI_CLIENT_SECRET:?set KEYCLOAK_MOQUI_CLIENT_SECRET in ai/.env}
+      KEYCLOAK_LIBRECHAT_CLIENT_SECRET: ${KEYCLOAK_LIBRECHAT_CLIENT_SECRET:?set KEYCLOAK_LIBRECHAT_CLIENT_SECRET in ai/.env}
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c \"exec 3<>/dev/tcp/127.0.0.1/9000\""]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 45s
+
+networks:
+  default:
+    # The Moqui deployment owns this shared network; do not recreate it from the AI stack.
+    name: moqui_default
+    external: true

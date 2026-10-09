@@ -50,19 +50,36 @@ services:
       # CyberProductContentServices.xml) - no copy step, both sides see the
       # identical absolute host path.
       - ./librechat/uploads:/app/uploads
+      - ./keycloak/tls/ca.crt:/usr/local/share/ca-certificates/moqui-keycloak-ca.crt:ro
+      - ./librechat/skills:/app/skills
     extra_hosts:
       # allows LibreChat inside Docker to reach Moqui running on the host
       - "host.docker.internal:host-gateway"
     environment:
       - HOST=0.0.0.0
       - PORT=3080
-      - DOMAIN_CLIENT=http://localhost:8081/librechat
+      - CONFIG_PATH=/app/librechat.yaml
+      - DEPLOYMENT_SKILLS_DIR=/app/skills
+      # LibreChat is published directly on 3081 in this local profile; a base path here
+      # makes the browser request /librechat/assets and renders a blank page.
+      - DOMAIN_CLIENT=http://localhost:3081
       - DOMAIN_SERVER=http://localhost:3081
+      - NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/moqui-keycloak-ca.crt
       - MONGO_URI=mongodb://moqui-librechat-db:27017/LibreChat
       - JWT_SECRET=${LIBRECHAT_JWT_SECRET:-moqui-librechat-jwt-dev-secret-changeme}
       - JWT_REFRESH_SECRET=${LIBRECHAT_JWT_REFRESH_SECRET:-moqui-librechat-refresh-dev-secret-changeme}
-      - ALLOW_EMAIL_LOGIN=true
-      - ALLOW_REGISTRATION=true
+      # Keycloak is the sole user identity provider; no local LibreChat accounts.
+      - ALLOW_EMAIL_LOGIN=false
+      - ALLOW_REGISTRATION=false
+      - ALLOW_SOCIAL_LOGIN=true
+      - OPENID_ISSUER=https://host.docker.internal:8444/realms/moqui
+      - OPENID_CLIENT_ID=librechat
+      - OPENID_CLIENT_SECRET=${KEYCLOAK_LIBRECHAT_CLIENT_SECRET:?set KEYCLOAK_LIBRECHAT_CLIENT_SECRET in ai/.env}
+      - OPENID_SESSION_SECRET=${LIBRECHAT_OPENID_SESSION_SECRET:?set LIBRECHAT_OPENID_SESSION_SECRET in ai/.env}
+      - OPENID_CALLBACK_URL=/oauth/openid/callback
+      - OPENID_SCOPE=openid profile email
+      - OPENID_USE_PKCE=true
+      - OPENID_AUTO_REDIRECT=true
       - SESSION_EXPIRY=900000
       - REFRESH_TOKEN_EXPIRY=604800000
       - NO_INDEX=true
@@ -72,7 +89,7 @@ services:
       - LIBRECHAT_ANTHROPIC_API_KEY=${LIBRECHAT_ANTHROPIC_API_KEY:-}
       # Gemini/Google endpoint support.
       - GOOGLE_KEY=${LIBRECHAT_GOOGLE_KEY:-}
-      - GOOGLE_MODELS=${LIBRECHAT_GOOGLE_MODELS:-gemini-3.6-flash}
+      - GOOGLE_MODELS=${LIBRECHAT_GOOGLE_MODELS:-gemini-3.5-flash}
       # Direct OpenAI-compatible providers.
       - DEEPSEEK_API_KEY=${LIBRECHAT_DEEPSEEK_API_KEY:-}
       - MOONSHOT_API_KEY=${LIBRECHAT_MOONSHOT_API_KEY:-}

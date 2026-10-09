@@ -1,0 +1,35 @@
+{
+  "realm": "moqui",
+  "enabled": true,
+  "displayName": "Moqui",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "clients": [
+    {
+      "clientId": "moqui-web",
+      "name": "Moqui Web",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "${KEYCLOAK_MOQUI_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:8080/sso/callback*"],
+      "webOrigins": ["http://localhost:8080"]
+    },
+    {
+      "clientId": "librechat",
+      "name": "LibreChat",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "${KEYCLOAK_LIBRECHAT_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:3081/*"],
+      "webOrigins": ["http://localhost:3081"]
+    }
+  ]
+}
