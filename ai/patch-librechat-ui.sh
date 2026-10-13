@@ -40,9 +40,28 @@ script = """<script>
     c.remove(theme === 'dark' ? 'light' : 'dark');
     c.add(theme);
   });
-  if (window.parent !== window) {
-    ORIGINS.forEach(function (o) { try { window.parent.postMessage({ type: 'librechat-ready' }, o); } catch (x) {} });
+  function post(target, message) {
+    ORIGINS.forEach(function (o) { try { target.postMessage(message, o); } catch (x) {} });
   }
+  if (window.parent !== window) post(window.parent, { type: 'librechat-ready' });
+  // In the side panel of Moqui the identity provider cannot be used when the browser blocks third-party cookies, so a page that
+  // needs a sign-in says so and Moqui does it in a window of its own; that window closes itself once it is in the chat.
+  var tries = 0;
+  var watcher = setInterval(function () {
+    tries++;
+    var path = location.pathname;
+    if (window.parent !== window) {
+      if (/^\/login/.test(path) && document.body && /OpenID/i.test(document.body.innerText)) {
+        post(window.parent, { type: 'librechat-login-required', loginUrl: location.origin + '/oauth/openid' });
+        clearInterval(watcher);
+      }
+    } else if (window.opener && /^\/c\//.test(path)) {
+      post(window.opener, { type: 'librechat-logged-in' });
+      clearInterval(watcher);
+      setTimeout(function () { window.close(); }, 300);
+    }
+    if (tries > 240) clearInterval(watcher);
+  }, 500);
 })();
 </script>
 </head>""" % json.dumps(origins)
