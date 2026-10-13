@@ -16,8 +16,12 @@
       "secret": "${KEYCLOAK_MOQUI_CLIENT_SECRET}",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
-      "redirectUris": ["http://localhost:8080/sso/callback*"],
-      "webOrigins": ["http://localhost:8080"]
+      "redirectUris": [
+        "http://localhost:8080/sso/callback*"
+      ],
+      "webOrigins": [
+        "http://localhost:8080"
+      ]
     },
     {
       "clientId": "librechat",
@@ -28,8 +32,16 @@
       "secret": "${KEYCLOAK_LIBRECHAT_CLIENT_SECRET}",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
-      "redirectUris": ["http://localhost:3081/*"],
-      "webOrigins": ["http://localhost:3081"]
+      "redirectUris": [
+        "http://localhost:3081/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3081"
+      ]
     }
-  ]
+  ],
+  "browserSecurityHeaders": {
+    "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self' http://localhost:8080 http://127.0.0.1:8080 http://localhost:3081; object-src 'none';",
+    "xFrameOptions": ""
+  }
 }

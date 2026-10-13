@@ -109,14 +109,18 @@ mcpSettings:
 # MCP server configuration — Moqui MCP integration.
 # LibreChat reaches the local test Moqui process on port 8080 through Docker's host gateway.
 # Its MCP SDK currently speaks 2025-11-25; moqui-mcp enables a profile-scoped adapter.
-# Authorization: Basic base64(john.doe:moqui) — replace with a dedicated MCP user in production.
+# Authorization: the Keycloak access token of the person who is chatting (Bearer, see the header below).
 mcpServers:
   moqui:
+    # Connected for each person when they chat (the header names the person), not once at startup
+    startup: false
     type: streamable-http
     url: "http://host.docker.internal:8080/mcp"
     headers:
       Accept: "application/json, text/event-stream"
-      Authorization: "Basic am9obi5kb2U6bW9xdWk="
+      # The person who is chatting: the access token that Keycloak issued to LibreChat for them (OPENID_REUSE_TOKENS), which
+      # Moqui MCP checks and runs the request as the Moqui user of the same username. No shared account.
+      Authorization: "Bearer {{LIBRECHAT_OPENID_TOKEN}}"
       # Enables only the legacy protocol adapter; normal Moqui artifact authorization still applies.
       X-Moqui-Mcp-Profile: "librechat"
       # Do not set MCP-Protocol-Version here: LibreChat's MCP SDK already sends it,

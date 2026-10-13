@@ -88,6 +88,8 @@ services:
       - OPENID_CALLBACK_URL=/oauth/openid/callback
       - OPENID_SCOPE=openid profile email
       - OPENID_USE_PKCE=true
+      # Keep the Keycloak tokens of the session, so that MCP servers are called as the person who is chatting
+      - OPENID_REUSE_TOKENS=true
       - OPENID_AUTO_REDIRECT=true
       - SESSION_EXPIRY=900000
       - REFRESH_TOKEN_EXPIRY=604800000
