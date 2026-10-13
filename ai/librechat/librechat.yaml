@@ -50,6 +50,19 @@ fileConfig:
         - "application/pdf"
         - "image/jpeg"
         - "image/png"
+        - "application/zip"
+        - "application/x-zip-compressed"
+    # The model spec of the deployment uses the OpenAI endpoint: the same files as for agents
+    openAI:
+      fileLimit: 10
+      fileSizeLimit: 50
+      supportedMimeTypes:
+        - "text/csv"
+        - "application/pdf"
+        - "image/jpeg"
+        - "image/png"
+        - "application/zip"
+        - "application/x-zip-compressed"
 
 # Local file storage (not S3/Firebase/Azure) - writes uploads to /app/uploads
 # inside the container, bind-mounted to ./librechat/uploads on the host
