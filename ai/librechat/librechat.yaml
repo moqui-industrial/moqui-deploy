@@ -42,27 +42,36 @@ fileConfig:
   serverFileSizeLimit: 100
   fileTokenLimit: 150000
   endpoints:
+    # Pictures, text, CSV, Excel and PDF; anything else (archives, for one) is refused when it is attached
     agents:
       fileLimit: 10
       fileSizeLimit: 50
       supportedMimeTypes:
-        - "text/csv"
-        - "application/pdf"
         - "image/jpeg"
         - "image/png"
-        - "application/zip"
-        - "application/x-zip-compressed"
+        - "image/gif"
+        - "image/webp"
+        - "text/plain"
+        - "text/markdown"
+        - "text/csv"
+        - "application/vnd.ms-excel"
+        - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        - "application/pdf"
     # The model spec of the deployment uses the OpenAI endpoint: the same files as for agents
     openAI:
       fileLimit: 10
       fileSizeLimit: 50
       supportedMimeTypes:
-        - "text/csv"
-        - "application/pdf"
         - "image/jpeg"
         - "image/png"
-        - "application/zip"
-        - "application/x-zip-compressed"
+        - "image/gif"
+        - "image/webp"
+        - "text/plain"
+        - "text/markdown"
+        - "text/csv"
+        - "application/vnd.ms-excel"
+        - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        - "application/pdf"
 
 # Local file storage (not S3/Firebase/Azure) - writes uploads to /app/uploads
 # inside the container, bind-mounted to ./librechat/uploads on the host
