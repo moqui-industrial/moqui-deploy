@@ -39,13 +39,16 @@ modelSpecs:
         - skills-python
 
 fileConfig:
-  serverFileSizeLimit: 100
+  serverFileSizeLimit: 15
   fileTokenLimit: 150000
   endpoints:
     # Pictures, text, CSV, Excel and PDF; anything else (archives, for one) is refused when it is attached
     agents:
-      fileLimit: 10
-      fileSizeLimit: 50
+      # A file that is attached is sent to the model again with every later message of the chat, so a message may carry few and small
+      # files: at most 3, 8 MB each and 15 MB together
+      fileLimit: 3
+      fileSizeLimit: 8
+      totalSizeLimit: 15
       supportedMimeTypes:
         - "image/jpeg"
         - "image/png"
@@ -59,8 +62,11 @@ fileConfig:
         - "application/pdf"
     # The model spec of the deployment uses the OpenAI endpoint: the same files as for agents
     openAI:
-      fileLimit: 10
-      fileSizeLimit: 50
+      # A file that is attached is sent to the model again with every later message of the chat, so a message may carry few and small
+      # files: at most 3, 8 MB each and 15 MB together
+      fileLimit: 3
+      fileSizeLimit: 8
+      totalSizeLimit: 15
       supportedMimeTypes:
         - "image/jpeg"
         - "image/png"
