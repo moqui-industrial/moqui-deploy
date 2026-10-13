@@ -52,6 +52,10 @@ services:
       - ./librechat/uploads:/app/uploads
       - ./keycloak/tls/ca.crt:/usr/local/share/ca-certificates/moqui-keycloak-ca.crt:ro
       - ./librechat/skills:/app/skills
+    networks:
+      - default
+      # the network of the Python server of the skills (python-skills-compose.yml), which has no way out
+      - skills_internal
     extra_hosts:
       # allows LibreChat inside Docker to reach Moqui running on the host
       - "host.docker.internal:host-gateway"
@@ -60,6 +64,11 @@ services:
       - PORT=3080
       - CONFIG_PATH=/app/librechat.yaml
       - DEPLOYMENT_SKILLS_DIR=/app/skills
+      # An empty value hides the footer ("LibreChat vX - Every AI for Everyone."); this version reads it from the environment
+      - CUSTOM_FOOTER=
+      # The client bundle is patched in place (patch-librechat-ui.sh) under the same file name: no long browser cache for it
+      - STATIC_CACHE_MAX_AGE=0
+      - STATIC_CACHE_S_MAX_AGE=0
       # LibreChat is published directly on 3081 in this local profile; a base path here
       # makes the browser request /librechat/assets and renders a blank page.
       - DOMAIN_CLIENT=http://localhost:3081
@@ -128,3 +137,6 @@ networks:
     # The Moqui deployment owns this shared network; do not recreate it from the AI stack.
     name: moqui_default
     external: true
+  skills_internal:
+    external: true
+    name: moqui_skills_internal

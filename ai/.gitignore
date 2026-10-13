@@ -26,3 +26,7 @@ ollama-local/
 ollama-local/**
 .env
 .env.*
+librechat/skill-workspace/
+librechat/skills/
+librechat/client-patch/
+librechat-ui-patch.generated.yml

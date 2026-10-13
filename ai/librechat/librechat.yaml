@@ -8,6 +8,35 @@ interface:
   artifactUndocking: true
   defaultPinnedTools:
     - artifacts
+  # Agents and skills are provided by the deployment, not built by the users: the model specs below switch the skills
+  # of the deployment (/app/skills, see ai/sync-librechat-skills.sh) and the Moqui MCP server on for every chat.
+  agents:
+    use: true
+    create: false
+    share: false
+    public: false
+  skills:
+    use: true
+    create: false
+    share: false
+    public: false
+
+# The chat a person opens: skills of the deployment and the Moqui MCP tools are on without any switch to press.
+modelSpecs:
+  prioritize: true
+  enforce: false
+  list:
+    - name: moqui-gpt5
+      label: "Moqui"
+      default: true
+      description: "Moqui assistant: deployment skills and the Moqui MCP server are always on"
+      preset:
+        endpoint: openAI
+        model: gpt-5
+      skills: true
+      mcpServers:
+        - moqui
+        - skills-python
 
 fileConfig:
   serverFileSizeLimit: 100
@@ -35,6 +64,8 @@ fileStrategy: "local"
 
 endpoints:
   agents:
+    # No Agent Builder panel in the sidebar
+    disableBuilder: true
     capabilities:
       - artifacts
       - tools
@@ -72,6 +103,8 @@ mcpSettings:
     # LibreChat does not interpolate arbitrary environment variables in this file.
     # Keep this origin aligned with the local Moqui test instance below.
     - "http://host.docker.internal:8080"
+    # The Python server of the skills, on the internal network of python-skills-compose.yml
+    - "http://moqui-python-skills:8000"
 
 # MCP server configuration — Moqui MCP integration.
 # LibreChat reaches the local test Moqui process on port 8080 through Docker's host gateway.
@@ -90,3 +123,13 @@ mcpServers:
       # and a second copy is merged into "2025-11-25, 2025-11-25", which Moqui rejects.
     timeout: 60000
     initTimeout: 30000
+
+  # Runs the Python scripts of the skills in a container of its own (ai/python-skills-mcp), without network access.
+  skills-python:
+    type: streamable-http
+    url: "http://moqui-python-skills:8000/mcp"
+    headers:
+      Accept: "application/json, text/event-stream"
+    timeout: 180000
+    initTimeout: 30000
+    serverInstructions: "Runs the Python scripts of the skills. Use list_skill_scripts to see them, write_file to give a script its input in the workspace, run_skill_script to run one and read_file to read what it wrote."

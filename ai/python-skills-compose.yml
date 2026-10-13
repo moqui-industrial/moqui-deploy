@@ -1,0 +1,42 @@
+# Python for the agent skills: an MCP server of its own, with the latest Python and the libraries of the skills, on a network
+# that has no way out. LibreChat joins that network as well (it keeps its own, with Internet) and reaches the server as
+# http://moqui-python-skills:8000/mcp; nothing is published on the host.
+#
+# Start (after sync-librechat-skills.sh has filled librechat/skills):
+#   docker compose -f python-skills-compose.yml -p ai up -d --build
+#
+# The writable workspace is ./librechat/skill-workspace on the host: inputs written by the model and the files a script makes.
+
+services:
+  moqui-python-skills:
+    build: ./python-skills-mcp
+    image: moqui-python-skills:latest
+    container_name: moqui-python-skills
+    restart: unless-stopped
+    # the files of the workspace belong to the user of the host
+    user: "1000:1000"
+    networks:
+      - skills_internal
+    volumes:
+      - ./librechat/skills:/skills:ro
+      - ./librechat/skill-workspace:/workspace
+    environment:
+      - SKILLS_DIR=/skills
+      - WORKSPACE_DIR=/workspace
+      - RUN_TIMEOUT_SECONDS=120
+      - RUN_PYTHON_ENABLED=false
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1536m
+    cpus: 1.0
+    pids_limit: 256
+
+networks:
+  skills_internal:
+    name: moqui_skills_internal
+    internal: true
