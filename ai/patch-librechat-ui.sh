@@ -20,6 +20,29 @@ if s.count(old) != 1:
     sys.exit("the skills entry of the sidebar is not in this bundle exactly once; the patch does not fit this image")
 open(p, 'w', encoding='utf-8').write(s.replace(old, "!1&&_.push({title:`com_ui_skills`"))
 PY
+# Browsers are served the precompressed copies of the bundle (.br and .gz next to it), not the file: the copies are made again from
+# the patched file, or the browsers would keep getting the original.
+node -e '
+const fs = require("fs"), z = require("zlib"), f = process.argv[1];
+const raw = fs.readFileSync(f);
+fs.writeFileSync(f + ".br", z.brotliCompressSync(raw, { params: { [z.constants.BROTLI_PARAM_QUALITY]: 11 } }));
+fs.writeFileSync(f + ".gz", z.gzipSync(raw, { level: 9 }));
+' "$OUT/$BUNDLE"
+
+# The service worker of LibreChat keeps the bundle in its precache by file name (revision null, the name is a hash), so a changed
+# file under the same name would never be fetched again by a browser that has the old one: the entry gets a revision, and a changed
+# sw.js makes the browsers install the new worker (it skips waiting and claims the page).
+docker run --rm --entrypoint cat "$IMAGE" /app/client/dist/sw.js > "$OUT/sw.js"
+python3 - "$OUT/sw.js" "$BUNDLE" <<'PY'
+import sys
+p, bundle = sys.argv[1], sys.argv[2]
+s = open(p, encoding='utf-8').read()
+old = '{url:"assets/%s",revision:null}' % bundle
+if s.count(old) != 1:
+    sys.exit("the service worker has no precache entry for the bundle; the patch does not fit this image")
+open(p, 'w', encoding='utf-8').write(s.replace(old, '{url:"assets/%s",revision:"moqui-patched-1"}' % bundle))
+PY
+
 # The theme of Moqui (the switch Dark/Light of its navbar) reaches LibreChat when it is shown in the side panel of Moqui: the page
 # of Moqui posts {type:'moqui-theme', dark:true|false} to the frame and this listener, in the index.html of LibreChat, sets the
 # theme the same way LibreChat does (class on <html> and the color-theme key). Only the origins named here are listened to.
@@ -75,6 +98,9 @@ services:
   moqui-librechat:
     volumes:
       - ./librechat/client-patch/$BUNDLE:/app/client/dist/assets/$BUNDLE:ro
+      - ./librechat/client-patch/$BUNDLE.br:/app/client/dist/assets/$BUNDLE.br:ro
+      - ./librechat/client-patch/$BUNDLE.gz:/app/client/dist/assets/$BUNDLE.gz:ro
       - ./librechat/client-patch/index.html:/app/client/dist/index.html:ro
+      - ./librechat/client-patch/sw.js:/app/client/dist/sw.js:ro
 EOF
 echo "patched $BUNDLE"
