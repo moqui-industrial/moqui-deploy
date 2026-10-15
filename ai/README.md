@@ -23,6 +23,10 @@ The profile is intended for development and staging-style local validation, espe
 - `librechat/librechat.yaml`: LibreChat MCP configuration for Moqui, OpenAI, Anthropic, Google, DeepSeek, and Kimi
 - `opensearch-compose.yml`: OpenSearch + Dashboards
 - `opensearch/`: custom Dockerfiles and plugin install scripts
+- `start-ai-stack.sh`: starts the AI side in order (skills sync, client patch, Keycloak, Python skills server, LibreChat)
+- `sync-librechat-skills.sh`: copies the deployment skills of LibreChat into `librechat/skills`
+- `patch-librechat-ui.sh`: builds the LibreChat client patch (sidebar, theme and sign-in messages of the Moqui panel)
+- `python-skills-compose.yml`, `python-skills-mcp/`: MCP server that runs the Python scripts of the skills, without network access
 
 ## Usage
 
@@ -72,6 +76,41 @@ preconfigured to call the authenticated Moqui endpoint at
 `http://host.docker.internal:8080/mcp`. This is a local integration profile: replace
 the development service account configuration with per-user authentication before
 deployment outside a trusted environment.
+
+## LibreChat skills
+
+LibreChat loads the skills of the deployment from one directory, `librechat/skills`, mounted at `/app/skills`
+(`DEPLOYMENT_SKILLS_DIR`). The model spec `Moqui` in `librechat/librechat.yaml` switches them on for every chat, and the
+Skills entry of the sidebar is hidden, so users neither build nor upload skills.
+
+`sync-librechat-skills.sh` builds that directory from the skill repositories listed in its `SOURCES` array:
+
+- `moqui-agent-skills/skills` (moqui-industrial/moqui-agent-skills)
+- `moqui-plc/agent-skills/skills` (moqui/moqui-plc)
+
+What it does:
+
+1. copies every folder with a `SKILL.md` flat into `librechat/skills`, because LibreChat reads only the skills at the root
+   of the directory; a skill removed from its repository is removed from the directory too
+2. stops on a symbolic link or on two skills with the same folder name, which LibreChat refuses
+3. moves the `compatibility` front-matter key under `metadata`, a key LibreChat does not accept at the top level
+
+LibreChat reads the skills when it starts, so after a change in a skill repository:
+
+```bash
+ai/sync-librechat-skills.sh
+docker restart moqui-librechat
+```
+
+`start-ai-stack.sh` runs the sync on every start. To add or remove a repository, edit `SOURCES` at the top of the
+script. These are the skills of LibreChat (integrations and data loading towards Moqui); the llm-client skills of
+the Moqui assistant are not offered to LibreChat by `moqui-mcp`.
+
+Start the whole AI side (after Moqui):
+
+```bash
+ai/start-ai-stack.sh
+```
 
 Stop services:
 
