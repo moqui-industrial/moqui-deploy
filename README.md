@@ -62,3 +62,29 @@ python industrial/openvla/fetch_openvla_sample_media.py
 2. Remove what you don't want
 3. Change what you want different
 4. Use it
+
+## Rust device gateway
+
+`industrial/device-gateway-compose.yml` describes the Java/Quarkus gateway.
+Use `industrial/device-gateway-rust-compose.yml` for the Rust `mr-moqui` branch:
+
+```bash
+export DEVICE_GATEWAY_CONTEXT=/absolute/path/to/moqui-device-gateway
+export GATEWAY_DEVICE_ID=GW_EDGE_01
+export GATEWAY_API_AUTH_TOKEN='replace-with-a-real-secret'
+docker compose -f industrial/device-gateway-rust-compose.yml -p moqui up -d --build
+```
+
+The checkout must be on `mr-moqui`. Start the industrial database/broker first,
+load the model through MR-Moqui master, and select the existing model and broker
+networks with `GATEWAY_MODEL_NETWORK` (default `moqui_default`) and
+`GATEWAY_BROKER_NETWORK` (default `moqui-broker_brokernet`, as created by the
+Artemis Compose project `moqui-broker`). Set `GATEWAY_DATABASE_URL`, `GATEWAY_LOG_DATABASE_URL` and
+broker credentials and `MQTT_BROKER_URL` for your environment. The default shared DB is for local tests;
+log storage may use a separate PostgreSQL/TimescaleDB database in production.
+The gateway reads the shared Moqui schema; it does not run the Java Moqui image.
+
+Rust gateway instructions are maintained in its branch-specific README:
+https://github.com/moqui/moqui-device-gateway/blob/mr-moqui/README.md
+Use a single gateway implementation on port 8081 and one active process for each
+logical `GATEWAY_DEVICE_ID`.
