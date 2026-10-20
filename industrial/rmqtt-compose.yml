@@ -1,0 +1,143 @@
+# A Docker Compose application for a redundant RMQTT MQTT broker: three nodes in a Raft cluster behind HAProxy.
+# Same role as activemq-compose.yml for the MQTT clients (device gateway, PLC firmware): MQTT 3.1.1 and 5 on 1883,
+# user and password, sessions and messages that survive a restart, a cluster that keeps serving when a node fails.
+# Not supported by RMQTT: JMS/CORE, AMQP, STOMP, OpenWire and the Artemis console. See rmqtt/README.md.
+#
+#     docker compose -f rmqtt-compose.yml up -d
+#     docker compose -f rmqtt-compose.yml ps
+#     curl -s -H 'Authorization: Bearer moqui-rmqtt' http://127.0.0.1:6060/api/v1/health/check
+#
+# Clients on the Compose network use tcp://moqui-rmqtt:1883 (the alias moqui-broker1 is kept so configurations written
+# for the Artemis compose keep working: set GATEWAY_BROKER_NETWORK=moqui-rmqtt_brokernet for the device gateway).
+# Host ports can be changed: RMQTT_MQTT_PORT (default 1883, the port of the Artemis compose: stop that one first),
+# RMQTT_API_PORT (default 6060, bound to 127.0.0.1).
+
+name: moqui-rmqtt
+
+networks:
+  brokernet:
+    driver: bridge
+
+volumes:
+  rmqtt-data1: { driver: local }
+  rmqtt-data2: { driver: local }
+  rmqtt-data3: { driver: local }
+
+x-rmqtt: &rmqtt
+  image: rmqtt/rmqtt:0.24.0
+  user: "0:0"
+  networks: [brokernet]
+  restart: always
+  depends_on:
+    rmqtt-auth: { condition: service_healthy }
+  ulimits:
+    nofile: { soft: 1048576, hard: 1048576 }
+  healthcheck:
+    # the node answers on its own API with a leader known; /api/v1/health/check (all nodes) would wait for the
+    # nodes that are still down and keep the first node unhealthy while the others wait for it
+    test:
+      - CMD-SHELL
+      - >-
+        wget -q -O -
+        --header "Authorization: Bearer $$(sed -n 's/^http_bearer_token *= *"\(.*\)"/\1/p' /app/rmqtt/rmqtt-plugins/rmqtt-http-api.toml)"
+        http://127.0.0.1:6060/api/v1/health/check/$$NODE_ID | grep -q '"running":true'
+    interval: 10s
+    timeout: 5s
+    retries: 12
+    start_period: 30s
+
+services:
+  # Authentication and authorization of the MQTT clients (users in rmqtt/auth/users.json)
+  rmqtt-auth:
+    image: python:3.13-alpine
+    container_name: moqui-rmqtt-auth
+    networks: [brokernet]
+    restart: always
+    environment:
+      USERS_FILE: /config/users.json
+    volumes:
+      - ./rmqtt/auth/auth-server.py:/app/auth-server.py:ro
+      - ./rmqtt/auth/users.json:/config/users.json:ro
+    command: ["python3", "/app/auth-server.py"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+
+  rmqtt1:
+    <<: *rmqtt
+    hostname: rmqtt1
+    container_name: moqui-rmqtt1
+    entrypoint: ["sh", "/app/start-node.sh", "1"]
+    environment:
+      NODE_ID: "1"
+    volumes:
+      - rmqtt-data1:/var/log/rmqtt
+      - ./rmqtt/start-node.sh:/app/start-node.sh:ro
+      - ./rmqtt/rmqtt.toml:/app/rmqtt/rmqtt.toml:ro
+      - ./rmqtt/rmqtt-cluster-raft.toml:/app/rmqtt/rmqtt-plugins/rmqtt-cluster-raft.toml:ro
+      - ./rmqtt/rmqtt-session-storage.toml:/app/rmqtt/rmqtt-plugins/rmqtt-session-storage.toml:ro
+      - ./rmqtt/rmqtt-retainer.toml:/app/rmqtt/rmqtt-plugins/rmqtt-retainer.toml:ro
+      - ./rmqtt/rmqtt-auth-http.toml:/app/rmqtt/rmqtt-plugins/rmqtt-auth-http.toml:ro
+      - ./rmqtt/rmqtt-acl.toml:/app/rmqtt/rmqtt-plugins/rmqtt-acl.toml:ro
+      - ./rmqtt/rmqtt-http-api.toml:/app/rmqtt/rmqtt-plugins/rmqtt-http-api.toml:ro
+
+  rmqtt2:
+    <<: *rmqtt
+    hostname: rmqtt2
+    container_name: moqui-rmqtt2
+    entrypoint: ["sh", "/app/start-node.sh", "2"]
+    environment:
+      NODE_ID: "2"
+    depends_on:
+      rmqtt-auth: { condition: service_healthy }
+      rmqtt1: { condition: service_healthy }
+    volumes:
+      - rmqtt-data2:/var/log/rmqtt
+      - ./rmqtt/start-node.sh:/app/start-node.sh:ro
+      - ./rmqtt/rmqtt.toml:/app/rmqtt/rmqtt.toml:ro
+      - ./rmqtt/rmqtt-cluster-raft.toml:/app/rmqtt/rmqtt-plugins/rmqtt-cluster-raft.toml:ro
+      - ./rmqtt/rmqtt-session-storage.toml:/app/rmqtt/rmqtt-plugins/rmqtt-session-storage.toml:ro
+      - ./rmqtt/rmqtt-retainer.toml:/app/rmqtt/rmqtt-plugins/rmqtt-retainer.toml:ro
+      - ./rmqtt/rmqtt-auth-http.toml:/app/rmqtt/rmqtt-plugins/rmqtt-auth-http.toml:ro
+      - ./rmqtt/rmqtt-acl.toml:/app/rmqtt/rmqtt-plugins/rmqtt-acl.toml:ro
+      - ./rmqtt/rmqtt-http-api.toml:/app/rmqtt/rmqtt-plugins/rmqtt-http-api.toml:ro
+
+  rmqtt3:
+    <<: *rmqtt
+    hostname: rmqtt3
+    container_name: moqui-rmqtt3
+    entrypoint: ["sh", "/app/start-node.sh", "3"]
+    environment:
+      NODE_ID: "3"
+    depends_on:
+      rmqtt-auth: { condition: service_healthy }
+      rmqtt1: { condition: service_healthy }
+    volumes:
+      - rmqtt-data3:/var/log/rmqtt
+      - ./rmqtt/start-node.sh:/app/start-node.sh:ro
+      - ./rmqtt/rmqtt.toml:/app/rmqtt/rmqtt.toml:ro
+      - ./rmqtt/rmqtt-cluster-raft.toml:/app/rmqtt/rmqtt-plugins/rmqtt-cluster-raft.toml:ro
+      - ./rmqtt/rmqtt-session-storage.toml:/app/rmqtt/rmqtt-plugins/rmqtt-session-storage.toml:ro
+      - ./rmqtt/rmqtt-retainer.toml:/app/rmqtt/rmqtt-plugins/rmqtt-retainer.toml:ro
+      - ./rmqtt/rmqtt-auth-http.toml:/app/rmqtt/rmqtt-plugins/rmqtt-auth-http.toml:ro
+      - ./rmqtt/rmqtt-acl.toml:/app/rmqtt/rmqtt-plugins/rmqtt-acl.toml:ro
+      - ./rmqtt/rmqtt-http-api.toml:/app/rmqtt/rmqtt-plugins/rmqtt-http-api.toml:ro
+
+  # One endpoint for the clients: MQTT on 1883, RMQTT HTTP API and dashboard on 6060
+  moqui-rmqtt:
+    image: haproxy:3.0-alpine
+    container_name: moqui-rmqtt
+    networks:
+      brokernet:
+        aliases: [moqui-broker1]
+    restart: always
+    depends_on:
+      rmqtt1: { condition: service_healthy }
+    volumes:
+      - ./rmqtt/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "${RMQTT_MQTT_PORT:-1883}:1883" # MQTT
+      - "127.0.0.1:${RMQTT_API_PORT:-6060}:6060" # HTTP API and dashboard

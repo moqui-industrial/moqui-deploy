@@ -6,7 +6,7 @@ These are opinionated configurations of different ways to deploy Moqui along wit
 
 To keep deployments organized, configuration files are grouped into subdirectories based on their deployment profile:
 
-*   **`industrial/`**: Configurations for industrial IoT applications (includes Docker Swarm configurations, ActiveMQ, MQTT Device Gateway, Grafana dashboards, OpenSearch, Postgres/YugabyteDB clustered data stores, backups, automated staging deployment scripts using Multipass, and GPU-oriented OpenVLA inference services callable from Moqui `remote-rest` services).
+*   **`industrial/`**: Configurations for industrial IoT applications (includes Docker Swarm configurations, ActiveMQ Artemis and a redundant RMQTT MQTT broker (see `industrial/rmqtt/README.md`), MQTT Device Gateway, Grafana dashboards, OpenSearch, Postgres/YugabyteDB clustered data stores, backups, automated staging deployment scripts using Multipass, and GPU-oriented OpenVLA inference services callable from Moqui `remote-rest` services).
 *   **`ai/`**: AI-oriented local deployment profile for components such as LibreChat and OpenSearch used with `moqui-mcp`.
 *   *Other profiles* (e.g., `ecommerce/`, `erp/`, etc.) can be added to customize deploy environments for specific application areas.
 

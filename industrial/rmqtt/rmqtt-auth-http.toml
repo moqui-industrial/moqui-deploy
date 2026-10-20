@@ -1,0 +1,84 @@
+##--------------------------------------------------------------------
+## rmqtt-auth-http
+##--------------------------------------------------------------------
+
+# See more keys and their definitions at https://github.com/rmqtt/rmqtt/blob/master/docs/en_US/auth-http.md
+
+http_timeout = "5s"
+http_headers.accept = "*/*"
+http_headers.Cache-Control = "no-cache"
+http_headers.User-Agent = "RMQTT/0.15.0"
+http_headers.Connection = "keep-alive"
+
+## Disconnect if publishing is rejected
+##
+## Value: true | false
+## Default: true
+disconnect_if_pub_rejected = true
+
+## Disconnect After Expiration
+##
+## Value: true | false
+## Default: false
+disconnect_if_expiry = false
+
+## Return 'Deny' if the HTTP request itself fails (transport-layer errors such
+## as connection refused, timeout, DNS or TLS failure), otherwise 'Ignore'.
+##
+## NOTE: This only covers request-level failures. If the auth service responds
+## with a non-2xx status code (404/500/502, ...), the request succeeded but no
+## auth decision was returned; the result is always 'Ignore' and the auth chain
+## continues, regardless of this option.
+##
+## WARNING: An 'Ignore' result leaves the decision to the remaining plugins.
+## The built-in rmqtt-acl plugin ships a default ["allow", "all"] rule whose
+## omitted action column resolves to ALL operations including CONNECT, so such
+## connections are explicitly allowed (even with allow_anonymous = false).
+## If you enable a custom auth plugin, comment out ["allow", "all"] and enable
+## ["deny", "all"] in rmqtt-acl.toml for fail-closed behavior.
+##
+## Value: true | false
+## Default: true
+deny_if_error = true
+
+
+##--------------------------------------------------------------------
+## Authentication request.
+##
+## Variables:
+##  - %u: username
+##  - %c: clientid
+##  - %a: ipaddress
+##  - %r: protocol
+##  - %P: password
+##
+## Value: URL
+http_auth_req.url = "http://rmqtt-auth:8080/mqtt/auth"
+## Value: post | get | put
+http_auth_req.method = "post"
+## HTTP request header of authentication request
+## Content-Type Currently supported values: application/x-www-form-urlencoded, application/json
+http_auth_req.headers = { content-type = "application/x-www-form-urlencoded" }
+#http_auth_req.headers.content-type="application/json"
+## Value: Params
+http_auth_req.params = { clientid = "%c", username = "%u", password = "%P", protocol = "%r" }
+
+
+##--------------------------------------------------------------------
+## ACL request.
+##
+## Variables:
+##  - %A: 1 | 2, 1 = sub, 2 = pub
+##  - %u: username
+##  - %c: clientid
+##  - %a: ipaddress
+##  - %r: protocol
+##  - %t: topic
+##
+## Value: URL
+http_acl_req.url = "http://rmqtt-auth:8080/mqtt/acl"
+## Value: post | get | put
+http_acl_req.method = "post"
+## Value: Params
+http_acl_req.params = { access = "%A", username = "%u", clientid = "%c", ipaddr = "%a", topic = "%t", protocol = "%r" }
+

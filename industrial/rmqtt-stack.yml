@@ -1,0 +1,190 @@
+# A Docker Swarm stack for a redundant RMQTT MQTT broker: three nodes in a Raft cluster behind HAProxy.
+# Same role as activemq-stack.yml for the MQTT clients (device gateway, PLC firmware): MQTT 3.1.1 and 5 on 1883,
+# user and password, sessions and messages that survive a restart, a cluster that keeps serving when a node fails.
+# Not supported by RMQTT: JMS/CORE, AMQP, STOMP, OpenWire and the Artemis console. See rmqtt/README.md.
+#
+# Apply labels to nodes (each broker node keeps its data on its own host, like the Artemis nodes; the three labels can
+# be on one node for a test):
+#     docker node update --label-add rmqtt_node1=true node1
+#     docker node update --label-add rmqtt_node2=true node2
+#     docker node update --label-add rmqtt_node3=true node3
+#
+# Create configs and secrets (names carry a version: a Swarm config cannot be changed; to change one, create it with
+# the next version, edit the version in this file and redeploy):
+#     docker config create rmqtt_conf_v1 ./rmqtt/rmqtt.toml
+#     docker config create rmqtt_raft_v1 ./rmqtt/rmqtt-cluster-raft.toml
+#     docker config create rmqtt_session_v1 ./rmqtt/rmqtt-session-storage.toml
+#     docker config create rmqtt_retainer_v1 ./rmqtt/rmqtt-retainer.toml
+#     docker config create rmqtt_authhttp_v1 ./rmqtt/rmqtt-auth-http.toml
+#     docker config create rmqtt_acl_v1 ./rmqtt/rmqtt-acl.toml
+#     docker config create rmqtt_api_v1 ./rmqtt/rmqtt-http-api.toml
+#     docker config create rmqtt_start_v1 ./rmqtt/start-node.sh
+#     docker config create rmqtt_haproxy_v1 ./rmqtt/haproxy.cfg
+#     docker config create rmqtt_auth_script_v1 ./rmqtt/auth/auth-server.py
+#     docker secret create rmqtt_users_v1 ./rmqtt/auth/users.json
+#
+# Deploy the stack:
+#     docker stack deploy -c rmqtt-stack.yml moqui-rmqtt
+#     docker stack services moqui-rmqtt
+#     ./rmqtt/test-rmqtt.sh swarm                 # acceptance test, run on a manager node
+#
+# Remove the stack (the data volumes stay):
+#     docker stack rm moqui-rmqtt
+#     docker volume ls | grep moqui-rmqtt
+#     docker volume rm moqui-rmqtt_rmqtt-data1 moqui-rmqtt_rmqtt-data2 moqui-rmqtt_rmqtt-data3
+#
+# Print logs:
+#     docker service logs moqui-rmqtt_rmqtt1 --tail 200
+#
+# Clients on the overlay network use tcp://moqui-rmqtt:1883 (the alias moqui-broker1 is kept so configurations
+# written for the Artemis stack keep working). The network is attachable: containers outside the stack can join it.
+#
+# Why the broker nodes have no Docker healthcheck: Swarm leaves a task out of the DNS answers until it is healthy, and a
+# node becomes healthy only after the others have found it by name to form the cluster: they would wait for each other
+# forever. A node that cannot reach the cluster stops itself instead (health.exit_on_node_unavailable in
+# rmqtt-cluster-raft.toml) and Swarm starts it again.
+#
+# Why the broker nodes use endpoint_mode dnsrr: the cluster nodes find each other by name and a node must see the
+# address of the container itself, not a virtual IP of the service.
+
+configs:
+  rmqtt_conf_v1: { external: true }
+  rmqtt_raft_v1: { external: true }
+  rmqtt_session_v1: { external: true }
+  rmqtt_retainer_v1: { external: true }
+  rmqtt_authhttp_v1: { external: true }
+  rmqtt_acl_v1: { external: true }
+  rmqtt_api_v1: { external: true }
+  rmqtt_start_v1: { external: true }
+  rmqtt_haproxy_v1: { external: true }
+  rmqtt_auth_script_v1: { external: true }
+
+secrets:
+  rmqtt_users_v1: { external: true }
+
+networks:
+  brokernet:
+    driver: overlay
+    attachable: true
+
+volumes:
+  rmqtt-data1: { driver: local }
+  rmqtt-data2: { driver: local }
+  rmqtt-data3: { driver: local }
+
+x-rmqtt-configs: &rmqtt-configs
+  - { source: rmqtt_conf_v1, target: /app/rmqtt/rmqtt.toml, mode: 0444 }
+  - { source: rmqtt_raft_v1, target: /app/rmqtt/rmqtt-plugins/rmqtt-cluster-raft.toml, mode: 0444 }
+  - { source: rmqtt_session_v1, target: /app/rmqtt/rmqtt-plugins/rmqtt-session-storage.toml, mode: 0444 }
+  - { source: rmqtt_retainer_v1, target: /app/rmqtt/rmqtt-plugins/rmqtt-retainer.toml, mode: 0444 }
+  - { source: rmqtt_authhttp_v1, target: /app/rmqtt/rmqtt-plugins/rmqtt-auth-http.toml, mode: 0444 }
+  - { source: rmqtt_acl_v1, target: /app/rmqtt/rmqtt-plugins/rmqtt-acl.toml, mode: 0444 }
+  - { source: rmqtt_api_v1, target: /app/rmqtt/rmqtt-plugins/rmqtt-http-api.toml, mode: 0444 }
+  - { source: rmqtt_start_v1, target: /app/start-node.sh, mode: 0555 }
+
+services:
+  # Authentication and authorization of the MQTT clients (users in the rmqtt_users secret)
+  rmqtt-auth:
+    image: python:3.13-alpine
+    networks: [brokernet]
+    configs:
+      - { source: rmqtt_auth_script_v1, target: /app/auth-server.py, mode: 0444 }
+    secrets:
+      - { source: rmqtt_users_v1, target: rmqtt_users, mode: 0444 }
+    environment:
+      USERS_FILE: /run/secrets/rmqtt_users
+    command: ["python3", "/app/auth-server.py"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    deploy:
+      replicas: 2
+      restart_policy: { condition: any, delay: 5s }
+      update_config: { parallelism: 1, order: stop-first }
+
+  # RMQTT node 1 creates the cluster on the very first start; nodes 2 and 3 join it
+  rmqtt1:
+    image: rmqtt/rmqtt:0.24.0
+    hostname: rmqtt1
+    user: "0:0"
+    networks: [brokernet]
+    entrypoint: ["sh", "/app/start-node.sh", "1"]
+    environment:
+      NODE_ID: "1"
+    volumes:
+      - { type: volume, source: rmqtt-data1, target: /var/log/rmqtt }
+    configs: *rmqtt-configs
+    ulimits:
+      nofile: { soft: 1048576, hard: 1048576 }
+    healthcheck: { disable: true } # see the note at the top: Swarm hides unhealthy tasks from DNS
+    deploy:
+      replicas: 1
+      endpoint_mode: dnsrr
+      restart_policy: { condition: any, delay: 5s }
+      update_config: { parallelism: 1, order: stop-first }
+      placement:
+        constraints: ["node.labels.rmqtt_node1 == true"]
+
+  rmqtt2:
+    image: rmqtt/rmqtt:0.24.0
+    hostname: rmqtt2
+    user: "0:0"
+    networks: [brokernet]
+    entrypoint: ["sh", "/app/start-node.sh", "2"]
+    environment:
+      NODE_ID: "2"
+    volumes:
+      - { type: volume, source: rmqtt-data2, target: /var/log/rmqtt }
+    configs: *rmqtt-configs
+    ulimits:
+      nofile: { soft: 1048576, hard: 1048576 }
+    healthcheck: { disable: true } # see the note at the top: Swarm hides unhealthy tasks from DNS
+    deploy:
+      replicas: 1
+      endpoint_mode: dnsrr
+      # nodes 2 and 3 wait inside start-node.sh until another node has a leader
+      restart_policy: { condition: any, delay: 5s }
+      update_config: { parallelism: 1, order: stop-first }
+      placement:
+        constraints: ["node.labels.rmqtt_node2 == true"]
+
+  rmqtt3:
+    image: rmqtt/rmqtt:0.24.0
+    hostname: rmqtt3
+    user: "0:0"
+    networks: [brokernet]
+    entrypoint: ["sh", "/app/start-node.sh", "3"]
+    environment:
+      NODE_ID: "3"
+    volumes:
+      - { type: volume, source: rmqtt-data3, target: /var/log/rmqtt }
+    configs: *rmqtt-configs
+    ulimits:
+      nofile: { soft: 1048576, hard: 1048576 }
+    healthcheck: { disable: true } # see the note at the top: Swarm hides unhealthy tasks from DNS
+    deploy:
+      replicas: 1
+      endpoint_mode: dnsrr
+      restart_policy: { condition: any, delay: 5s }
+      update_config: { parallelism: 1, order: stop-first }
+      placement:
+        constraints: ["node.labels.rmqtt_node3 == true"]
+
+  # One endpoint for the clients: MQTT on 1883, RMQTT HTTP API and dashboard on 6060 (token in rmqtt-http-api.toml)
+  moqui-rmqtt:
+    image: haproxy:3.0-alpine
+    networks:
+      brokernet:
+        aliases: [moqui-broker1]
+    configs:
+      - { source: rmqtt_haproxy_v1, target: /usr/local/etc/haproxy/haproxy.cfg, mode: 0444 }
+    ports:
+      - { target: 1883, published: 1883, protocol: tcp, mode: ingress } # MQTT
+      - { target: 6060, published: 6060, protocol: tcp, mode: ingress } # HTTP API and dashboard
+    deploy:
+      replicas: 2
+      restart_policy: { condition: any, delay: 5s }
+      update_config: { parallelism: 1, order: stop-first }

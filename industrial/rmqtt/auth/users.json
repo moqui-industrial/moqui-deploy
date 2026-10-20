@@ -1,0 +1,5 @@
+{
+  "users": {
+    "artemis": { "password": "artemis", "superuser": true }
+  }
+}
