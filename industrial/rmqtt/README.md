@@ -25,11 +25,8 @@ rmqtt/test-rmqtt.sh compose                         # optional, restarts nodes: 
 
 Swarm: label the nodes, create the configs and the secret, deploy (the exact commands are in the header of
 `rmqtt-stack.yml`). Clients use `tcp://moqui-rmqtt:1883` on the network `moqui-rmqtt_brokernet`; the alias
-`moqui-broker1` is kept, so the device gateway keeps its default `MQTT_BROKER_URL`:
-
-```sh
-GATEWAY_BROKER_NETWORK=moqui-rmqtt_brokernet docker compose -f device-gateway-rust-compose.yml up -d
-```
+`moqui-broker1` is kept, so clients configured for the Artemis broker (`tcp://moqui-broker1:1883`) only need to join
+that network.
 
 Default user: `artemis` / `artemis` (the same as Artemis, so no client has to change). **Change it** in
 `auth/users.json` (Compose: the file is read again when it changes; Swarm: create a new secret version) and the API
