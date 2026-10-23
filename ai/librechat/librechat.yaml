@@ -33,6 +33,7 @@ modelSpecs:
       preset:
         endpoint: openAI
         model: gpt-5
+      artifacts: true
       skills: true
       mcpServers:
         - moqui

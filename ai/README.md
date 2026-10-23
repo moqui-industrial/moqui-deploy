@@ -85,8 +85,7 @@ Skills entry of the sidebar is hidden, so users neither build nor upload skills.
 
 `sync-librechat-skills.sh` builds that directory from the skill repositories listed in its `SOURCES` array:
 
-- `moqui-agent-skills/skills` (moqui-industrial/moqui-agent-skills)
-- `moqui-plc/agent-skills/skills` (moqui/moqui-plc)
+- `.agents/skills` in `moqui-industrial/moqui-agent-skills`
 
 What it does:
 
@@ -105,6 +104,12 @@ docker restart moqui-librechat
 `start-ai-stack.sh` runs the sync on every start. To add or remove a repository, edit `SOURCES` at the top of the
 script. These are the skills of LibreChat (integrations and data loading towards Moqui); the llm-client skills of
 the Moqui assistant are not offered to LibreChat by `moqui-mcp`.
+
+## BI charts
+
+The `Moqui` model spec enables LibreChat Artifacts. The `moqui-bi-analysis` skill renders bounded DataDocument query
+results as a Chart.js HTML artifact and an accessible table. Chart.js is loaded from its pinned public CDN version;
+the optional Vega-Lite JSON is an export format, not a LibreChat renderer.
 
 Start the whole AI side (after Moqui):
 
