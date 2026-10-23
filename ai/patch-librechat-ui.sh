@@ -34,13 +34,15 @@ fs.writeFileSync(f + ".gz", z.gzipSync(raw, { level: 9 }));
 # sw.js makes the browsers install the new worker (it skips waiting and claims the page).
 docker run --rm --entrypoint cat "$IMAGE" /app/client/dist/sw.js > "$OUT/sw.js"
 python3 - "$OUT/sw.js" "$BUNDLE" <<'PY'
-import sys
+import hashlib, sys
 p, bundle = sys.argv[1], sys.argv[2]
 s = open(p, encoding='utf-8').read()
 old = '{url:"assets/%s",revision:null}' % bundle
 if s.count(old) != 1:
     sys.exit("the service worker has no precache entry for the bundle; the patch does not fit this image")
-open(p, 'w', encoding='utf-8').write(s.replace(old, '{url:"assets/%s",revision:"moqui-patched-1"}' % bundle))
+bundle_path = p.rsplit('/', 1)[0] + '/' + bundle
+revision = 'moqui-' + hashlib.sha256(open(bundle_path, 'rb').read()).hexdigest()[:16]
+open(p, 'w', encoding='utf-8').write(s.replace(old, '{url:"assets/%s",revision:"%s"}' % (bundle, revision)))
 PY
 
 # The theme of Moqui (the switch Dark/Light of its navbar) reaches LibreChat when it is shown in the side panel of Moqui: the page
@@ -52,7 +54,7 @@ python3 - "$OUT/index.html" "$MOQUI_ORIGINS" <<'PY'
 import sys, json
 p, origins = sys.argv[1], [o.strip() for o in sys.argv[2].split(',') if o.strip()]
 s = open(p, encoding='utf-8').read()
-script = """<script>
+script = r"""<script>
 (function () {
   var ORIGINS = %s;
   window.addEventListener('message', function (e) {
@@ -67,6 +69,82 @@ script = """<script>
     ORIGINS.forEach(function (o) { try { target.postMessage(message, o); } catch (x) {} });
   }
   if (window.parent !== window) post(window.parent, { type: 'librechat-ready' });
+  var chartScript;
+  var chartPalette = ['#1976d2', '#26a69a', '#9c27b0', '#ff9800', '#ef5350', '#5c6bc0', '#66bb6a', '#8d6e63'];
+  function boundedText(value, limit) {
+    return typeof value === 'string' ? value.slice(0, limit) : '';
+  }
+  function chartSpec(value) {
+    var spec;
+    try { spec = JSON.parse(value); } catch (x) { return null; }
+    if (!spec || ['bar', 'line', 'pie', 'doughnut'].indexOf(spec.type) < 0 || !Array.isArray(spec.labels) || !Array.isArray(spec.datasets)) return null;
+    if (spec.labels.length < 1 || spec.labels.length > 100 || spec.datasets.length < 1 || spec.datasets.length > 8) return null;
+    var labels = spec.labels.map(function (label) { return boundedText(String(label), 120); });
+    var datasets = spec.datasets.map(function (dataset, index) {
+      if (!dataset || !Array.isArray(dataset.data) || dataset.data.length !== labels.length) return null;
+      var data = dataset.data.map(function (number) { return Number(number); });
+      if (data.some(function (number) { return !Number.isFinite(number); })) return null;
+      return {
+        label: boundedText(dataset.label || ('Series ' + (index + 1)), 120),
+        data: data,
+        backgroundColor: chartPalette[index],
+        borderColor: chartPalette[index],
+        borderWidth: 1
+      };
+    });
+    return datasets.some(function (dataset) { return !dataset; }) ? null : { title: boundedText(spec.title || 'Chart', 160), type: spec.type, labels: labels, datasets: datasets };
+  }
+  function loadChart(callback) {
+    if (window.Chart) { callback(); return; }
+    if (chartScript) { chartScript.addEventListener('load', callback, { once: true }); return; }
+    chartScript = document.createElement('script');
+    chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js';
+    chartScript.integrity = 'sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC';
+    chartScript.crossOrigin = 'anonymous';
+    chartScript.addEventListener('load', callback, { once: true });
+    document.head.appendChild(chartScript);
+  }
+  function renderChart(code) {
+    if (code.dataset.moquiChartRendered) return;
+    var spec = chartSpec(code.textContent);
+    if (!spec || !code.parentElement || !code.parentElement.parentElement) return;
+    code.dataset.moquiChartRendered = 'true';
+    loadChart(function () {
+      if (!window.Chart) return;
+      var pre = code.parentElement;
+      var panel = document.createElement('section');
+      panel.style.cssText = 'max-width:720px;height:420px;margin:1rem 0;padding:1rem;border:1px solid #777;border-radius:.5rem;background:var(--surface-primary,#fff)';
+      var title = document.createElement('h3');
+      title.textContent = spec.title;
+      title.style.margin = '0 0 .75rem';
+      var canvas = document.createElement('canvas');
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', spec.title);
+      panel.appendChild(title);
+      panel.appendChild(canvas);
+      pre.parentElement.insertBefore(panel, pre.nextSibling);
+      pre.style.display = 'none';
+      new window.Chart(canvas, {
+        type: spec.type,
+        data: { labels: spec.labels, datasets: spec.datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: spec.datasets.length > 1 }, tooltip: { enabled: true } },
+          scales: (spec.type === 'bar' || spec.type === 'line') ? { y: { beginAtZero: true } } : {}
+        }
+      });
+    });
+  }
+  function renderCharts() {
+    document.querySelectorAll('pre code.language-chartjs, pre code[class*="language-chartjs"]').forEach(renderChart);
+  }
+  var chartTimer;
+  new MutationObserver(function () {
+    clearTimeout(chartTimer);
+    chartTimer = setTimeout(renderCharts, 100);
+  }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+  document.addEventListener('DOMContentLoaded', renderCharts);
   // In the side panel of Moqui the identity provider cannot be used when the browser blocks third-party cookies, so a page that
   // needs a sign-in says so and Moqui does it in a window of its own; that window closes itself once it is in the chat.
   var tries = 0;
