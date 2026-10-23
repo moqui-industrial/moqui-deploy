@@ -110,7 +110,12 @@ the Moqui assistant are not offered to LibreChat by `moqui-mcp`.
 The `Moqui` model spec enables LibreChat Artifacts. The `moqui-bi-analysis` skill renders bounded DataDocument query
 results as a bounded `chartjs` JSON block and an accessible table. The patched LibreChat client validates that block and
 renders it inline with Chart.js from a pinned public CDN version; the optional Vega-Lite JSON is an export format, not a
-LibreChat renderer.
+LibreChat renderer. The client accepts only chart type, labels, and finite numeric datasets in this block; it never
+executes model-provided JavaScript, HTML, URLs, or chart options.
+
+After changing `patch-librechat-ui.sh`, run it, recreate LibreChat, then make a hard browser refresh. The service-worker
+revision is derived from the generated client bundle, so a changed patch replaces the cached browser bundle. The Chart.js
+CDN must be reachable from the browser for visual rendering; the Markdown table remains the fallback.
 
 Start the whole AI side (after Moqui):
 
