@@ -10,4 +10,8 @@ cd "$HERE"
 docker compose -f keycloak-compose.yml -p ai up -d
 mkdir -p librechat/skill-workspace
 docker compose -f python-skills-compose.yml -p ai up -d --build
-docker compose -f librechat-compose.yml -f librechat-ui-patch.generated.yml -p ai up -d
+LIBRECHAT_COMPOSE=( -f librechat-compose.yml -f librechat-ui-patch.generated.yml )
+if [ -f .code-interpreter-librechat.generated.yml ]; then
+    LIBRECHAT_COMPOSE+=( -f .code-interpreter-librechat.generated.yml )
+fi
+docker compose "${LIBRECHAT_COMPOSE[@]}" -p ai up -d

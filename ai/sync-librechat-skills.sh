@@ -6,8 +6,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET="$HERE/librechat/skills"
 SOURCES=(
-  "/home/igor/development/projects/cybersecurity/vers2/test/moqui-agent-skills/skills"
-  "/home/igor/development/projects/moqui/master/moqui-plc/agent-skills/skills"
+  "/home/igor/development/projects/moqui/moqui-industrial/moqui-agent-skills/.agents/skills"
 )
 mkdir -p "$TARGET"
 declare -A seen

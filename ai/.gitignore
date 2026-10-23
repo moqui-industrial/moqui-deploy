@@ -30,3 +30,8 @@ librechat/skill-workspace/
 librechat/skills/
 librechat/client-patch/
 librechat-ui-patch.generated.yml
+.code-interpreter/
+.code-interpreter.env
+.code-interpreter-librechat.generated.yml
+.code-interpreter-worker.Dockerfile
+.code-interpreter*.bak

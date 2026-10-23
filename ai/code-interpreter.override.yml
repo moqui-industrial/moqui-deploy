@@ -1,0 +1,91 @@
+# Overrides for the pinned LibreChat Code Interpreter source checkout.
+# Use only through bootstrap-code-interpreter.sh and start-code-interpreter.sh.
+services:
+  api:
+    container_name: moqui-codeapi-api
+    ports: !reset []
+    environment:
+      CODEAPI_SANDBOX_BACKEND: remote-bridge
+      CODEAPI_EXECUTION_PROFILE: stateful
+      CODEAPI_RUNTIME_SESSION_MODE: affinity
+      CODEAPI_BRIDGE_AUTH_MODE: paired
+      CODEAPI_BRIDGE_DYNAMIC_WORKERS: "false"
+      CODEAPI_BRIDGE_WORKER_ID: moqui-sandbox-worker
+      CODEAPI_AUTH_PROVIDER: librechat-jwt
+      CODEAPI_JWT_ISSUER: librechat
+      CODEAPI_JWT_AUDIENCE: codeapi
+      CODEAPI_JWT_ALLOWED_ALGS: EdDSA
+      CODEAPI_JWT_JWKS_JSON: ${CODEAPI_JWT_JWKS_JSON:?run bootstrap-code-interpreter.sh}
+      CODEAPI_JWT_KID: moqui-codeapi-1
+      CODEAPI_JWT_SINGLE_TENANT_ID: moqui
+      CODEAPI_TENANT_ISOLATION_STRICT: "false"
+      CODEAPI_BRIDGE_TOKEN: ${CODEAPI_BRIDGE_TOKEN:?run bootstrap-code-interpreter.sh}
+      CODEAPI_INTERNAL_SERVICE_TOKEN: ${CODEAPI_INTERNAL_SERVICE_TOKEN:?run bootstrap-code-interpreter.sh}
+      REDIS_PASSWORD: ${CODEAPI_REDIS_PASSWORD:?run bootstrap-code-interpreter.sh}
+    networks:
+      default:
+      moqui_default:
+        aliases:
+          - moqui-codeapi-api
+
+  service-worker:
+    container_name: moqui-codeapi-worker
+    depends_on: !reset
+      redis:
+        condition: service_started
+    environment:
+      CODEAPI_SANDBOX_BACKEND: remote-bridge
+      CODEAPI_EXECUTION_PROFILE: stateful
+      CODEAPI_RUNTIME_SESSION_MODE: affinity
+      CODEAPI_BRIDGE_AUTH_MODE: paired
+      CODEAPI_BRIDGE_DYNAMIC_WORKERS: "false"
+      CODEAPI_BRIDGE_WORKER_ID: moqui-sandbox-worker
+      CODEAPI_BRIDGE_TOKEN: ${CODEAPI_BRIDGE_TOKEN:?run bootstrap-code-interpreter.sh}
+      CODEAPI_INTERNAL_SERVICE_TOKEN: ${CODEAPI_INTERNAL_SERVICE_TOKEN:?run bootstrap-code-interpreter.sh}
+      CODEAPI_EXECUTION_MANIFEST_PRIVATE_KEY: ${CODEAPI_EXECUTION_MANIFEST_PRIVATE_KEY:?run bootstrap-code-interpreter.sh}
+      REDIS_PASSWORD: ${CODEAPI_REDIS_PASSWORD:?run bootstrap-code-interpreter.sh}
+
+  egress_gateway:
+    container_name: moqui-codeapi-egress
+    ports: !reset []
+    environment:
+      CODEAPI_EGRESS_GRANT_SECRET: ${CODEAPI_EGRESS_GRANT_SECRET:?run bootstrap-code-interpreter.sh}
+      CODEAPI_INTERNAL_SERVICE_TOKEN: ${CODEAPI_INTERNAL_SERVICE_TOKEN:?run bootstrap-code-interpreter.sh}
+      REDIS_PASSWORD: ${CODEAPI_REDIS_PASSWORD:?run bootstrap-code-interpreter.sh}
+
+  tool_call_server:
+    container_name: moqui-codeapi-tools
+    ports: !reset []
+    environment:
+      CODEAPI_INTERNAL_SERVICE_TOKEN: ${CODEAPI_INTERNAL_SERVICE_TOKEN:?run bootstrap-code-interpreter.sh}
+      REDIS_PASSWORD: ${CODEAPI_REDIS_PASSWORD:?run bootstrap-code-interpreter.sh}
+
+  file_server:
+    container_name: moqui-codeapi-files
+    ports: !reset []
+    environment:
+      MINIO_BUCKET: moqui-codeapi
+      MINIO_PORT: "8333"
+      MINIO_ACCESS_KEY: ${CODEAPI_MINIO_ACCESS_KEY:?run bootstrap-code-interpreter.sh}
+      MINIO_SECRET_KEY: ${CODEAPI_MINIO_SECRET_KEY:?run bootstrap-code-interpreter.sh}
+      REDIS_PASSWORD: ${CODEAPI_REDIS_PASSWORD:?run bootstrap-code-interpreter.sh}
+      CODEAPI_INTERNAL_SERVICE_TOKEN: ${CODEAPI_INTERNAL_SERVICE_TOKEN:?run bootstrap-code-interpreter.sh}
+
+  redis:
+    container_name: moqui-codeapi-redis
+    ports: !reset []
+    command: redis-server --requirepass ${CODEAPI_REDIS_PASSWORD:?run bootstrap-code-interpreter.sh}
+
+  minio:
+    image: chrislusf/seaweedfs@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    container_name: moqui-codeapi-minio
+    ports: !reset []
+    environment:
+      MINIO_ROOT_USER: ${CODEAPI_MINIO_ACCESS_KEY:?run bootstrap-code-interpreter.sh}
+      MINIO_ROOT_PASSWORD: ${CODEAPI_MINIO_SECRET_KEY:?run bootstrap-code-interpreter.sh}
+    command: server -dir=/data -s3
+
+networks:
+  moqui_default:
+    external: true
+    name: moqui_default
