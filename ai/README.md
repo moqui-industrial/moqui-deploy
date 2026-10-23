@@ -23,6 +23,7 @@ The profile is intended for development and staging-style local validation, espe
 - `librechat/librechat.yaml`: LibreChat MCP configuration for Moqui, OpenAI, Anthropic, Google, DeepSeek, and Kimi
 - `opensearch-compose.yml`: OpenSearch + Dashboards
 - `opensearch/`: custom Dockerfiles and plugin install scripts
+- `searxng/settings.yml`: private SearXNG configuration used by LibreChat Web Search
 - `start-ai-stack.sh`: starts the AI side in order (skills sync, client patch, Keycloak, Python skills server, LibreChat)
 - `sync-librechat-skills.sh`: copies the deployment skills of LibreChat into `librechat/skills`
 - `patch-librechat-ui.sh`: builds the LibreChat client patch (sidebar, theme and sign-in messages of the Moqui panel)
@@ -45,6 +46,7 @@ LIBRECHAT_GOOGLE_KEY=your_gemini_key
 LIBRECHAT_GOOGLE_MODELS=gemini-3.6-flash
 LIBRECHAT_DEEPSEEK_API_KEY=your_deepseek_key
 LIBRECHAT_MOONSHOT_API_KEY=your_kimi_key
+SEARXNG_SECRET=generate-a-random-secret
 ```
 
 Start OpenSearch:
@@ -116,6 +118,14 @@ executes model-provided JavaScript, HTML, URLs, or chart options.
 After changing `patch-librechat-ui.sh`, run it, recreate LibreChat, then make a hard browser refresh. The service-worker
 revision is derived from the generated client bundle, so a changed patch replaces the cached browser bundle. The Chart.js
 CDN must be reachable from the browser for visual rendering; the Markdown table remains the fallback.
+
+## Web search
+
+`moqui-searxng` runs only on the private Docker network and is the configured LibreChat search provider. Its JSON API,
+safe-search level, engine list and timeout are defined in `searxng/settings.yml` and `librechat/librechat.yaml`. LibreChat
+uses no external scraping or reranking service. **Web Search** is pinned in the composer for a direct model chat; it is
+ also available to configured agents. SearXNG aggregates public search engines, so their availability
+and result coverage remain external dependencies.
 
 Start the whole AI side (after Moqui):
 

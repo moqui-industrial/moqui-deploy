@@ -10,6 +10,8 @@ opensearch/data/
 opensearch/data/**
 opensearch/logs/*
 !opensearch/logs/README
+searxng/cache/
+searxng/cache/**
 keycloak/postgres/
 keycloak/postgres/**
 keycloak/tls/

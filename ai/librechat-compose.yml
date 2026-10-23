@@ -36,6 +36,8 @@ services:
     depends_on:
       moqui-librechat-db:
         condition: service_healthy
+      moqui-searxng:
+        condition: service_started
     ports:
       - 127.0.0.1:3081:3080
     volumes:
@@ -104,6 +106,8 @@ services:
       # Direct OpenAI-compatible providers.
       - DEEPSEEK_API_KEY=${LIBRECHAT_DEEPSEEK_API_KEY:-}
       - MOONSHOT_API_KEY=${LIBRECHAT_MOONSHOT_API_KEY:-}
+      # Private SearXNG endpoint used by LibreChat Web Search; never exposed on a host port.
+      - SEARXNG_INSTANCE_URL=http://moqui-searxng:8080
       # Prevent LibreChat from treating Moqui's plain 401 (no Bearer challenge) as OAuth-required.
       # The OAuth detection probe runs without admin headers, so Moqui's 401 would otherwise
       # flip requiresOAuth=true and skip the admin Basic auth header entirely.
@@ -133,6 +137,16 @@ services:
       timeout: 5s
       retries: 10
       start_period: 20s
+
+  moqui-searxng:
+    image: ghcr.io/searxng/searxng:2026.10.19-81371861f@sha256:aa7270053bc3bf92155e2af83e2b0a7c3833c209cdeb8d396861a00c55ee7110
+    container_name: moqui-searxng
+    restart: unless-stopped
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+      - ./searxng/cache:/var/cache/searxng
+    environment:
+      - SEARXNG_SECRET=${SEARXNG_SECRET:?set SEARXNG_SECRET in ai/.env}
 
 networks:
   default:

@@ -1,0 +1,19 @@
+use_default_settings: true
+
+general:
+  instance_name: "Moqui Web Search"
+  enable_metrics: false
+
+search:
+  safe_search: 1
+  formats:
+    - html
+    - json
+
+server:
+  secret_key: "generated-by-SEARXNG_SECRET"
+  limiter: false
+  image_proxy: true
+
+outgoing:
+  request_timeout: 10.0

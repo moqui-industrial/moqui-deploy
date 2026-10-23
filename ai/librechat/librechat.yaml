@@ -8,6 +8,7 @@ interface:
   artifactUndocking: true
   defaultPinnedTools:
     - artifacts
+    - web_search
   # Agents and skills are provided by the deployment, not built by the users: the model specs below switch the skills
   # of the deployment (/app/skills, see ai/sync-librechat-skills.sh) and the Moqui MCP server on for every chat.
   agents:
@@ -91,6 +92,18 @@ fileConfig:
 # reachable by any Moqui-side tool).
 fileStrategy: "local"
 
+webSearch:
+  searchProvider: "searxng"
+  searxngInstanceUrl: "${SEARXNG_INSTANCE_URL}"
+  searxngSearchOptions:
+    engines: "google,bing,startpage,qwant"
+    language: "it-IT"
+    timeout: 15000
+  rerankerType: "none"
+  safeSearch: 1
+  allowedAddresses:
+    - "moqui-searxng:8080"
+
 endpoints:
   agents:
     # No Agent Builder panel in the sidebar
@@ -100,6 +113,7 @@ endpoints:
       - tools
       - context
       - skills
+      - web_search
   openAI:
     titleConvo: true
     titleModel: "gpt-5"
