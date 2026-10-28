@@ -20,9 +20,15 @@ services:
     volumes:
       - ./librechat/skills:/skills:ro
       - ./librechat/skill-workspace:/workspace
+      # documents of compliance projects, read only: the inbox the user fills (any size, never through the chat) and the
+      # content store Moqui copies attached files into (mantle.compliance.ContentServices.attach#Content)
+      - ./compliance-inbox:/inbox:ro
+      - ./compliance-content:/content:ro
     environment:
       - SKILLS_DIR=/skills
       - WORKSPACE_DIR=/workspace
+      - INBOX_DIR=/inbox
+      - CONTENT_DIR=/content
       - RUN_TIMEOUT_SECONDS=120
       - RUN_PYTHON_ENABLED=false
     read_only: true

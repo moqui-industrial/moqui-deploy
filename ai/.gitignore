@@ -37,3 +37,7 @@ librechat-ui-patch.generated.yml
 .code-interpreter-librechat.generated.yml
 .code-interpreter-worker.Dockerfile
 .code-interpreter*.bak
+
+# customer documents of compliance projects: never committed
+compliance-inbox/
+compliance-content/
