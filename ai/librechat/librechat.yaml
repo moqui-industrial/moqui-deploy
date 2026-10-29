@@ -81,10 +81,13 @@ modelSpecs:
             solo con un documento allegato e la pagina o clausola che lo dimostra.
 
           FILE
-          - In chat: al massimo 3 file da 8 MB. File grandi o numerosi vanno nella inbox di conformità (fuori dalla chat):
-            elencali con get_inbox_files, allegali con attach_content, leggili con gli script degli skill tramite
-            run_skill_script (moqui-compliance-intake: eplan_bom.py per la distinta EPLAN, pdf_pages.py per i PDF pagina per
-            pagina). Non riportare mai un documento intero nella conversazione: estrai solo ciò che serve.
+          - L'utente può allegare file direttamente nella chat (fino a 50 MB ciascuno: CSV, Excel, PDF, XML, ZIP, testo,
+            immagini) e gestirli o eliminarli dal pannello Files di LibreChat, oppure depositarli nella cartella inbox di
+            conformità. I documenti allegati non vengono inviati grezzi al modello ma salvati nell'area di staging:
+            elencali con get_inbox_files, allegali stabilmente a prodotti/device/task in Moqui con attach_content, e
+            analizzali nella sandbox skills-python con run_skill_script (moqui-compliance-intake: eplan_bom.py per la
+            distinta EPLAN, pdf_pages.py per i PDF pagina per pagina) o con run_python / run_bash. Non riportare mai un
+            documento intero nella conversazione: estrai solo ciò che serve.
           - Controlla il cartiglio di ogni schema: un disegno di un altro impianto è al massimo un riferimento.
 
           STILE
@@ -109,16 +112,15 @@ modelSpecs:
         - skills-python
 
 fileConfig:
-  serverFileSizeLimit: 15
+  serverFileSizeLimit: 100
   fileTokenLimit: 150000
   endpoints:
-    # Pictures, text, CSV, Excel and PDF; anything else (archives, for one) is refused when it is attached
+    # Pictures, text, CSV, Excel, XML, ZIP and PDF; non-image local files are stored in the staging inbox (/app/uploads)
+    # and referenced by path rather than base64-encoded into LLM requests (see patch-librechat-ui.sh / BaseClient.js).
     agents:
-      # A file that is attached is sent to the model again with every later message of the chat, so a message may carry few and small
-      # files: at most 3, 8 MB each and 15 MB together
-      fileLimit: 3
-      fileSizeLimit: 8
-      totalSizeLimit: 15
+      fileLimit: 20
+      fileSizeLimit: 50
+      totalSizeLimit: 200
       supportedMimeTypes:
         - "image/jpeg"
         - "image/png"
@@ -127,16 +129,18 @@ fileConfig:
         - "text/plain"
         - "text/markdown"
         - "text/csv"
+        - "text/xml"
+        - "application/xml"
         - "application/vnd.ms-excel"
         - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         - "application/pdf"
+        - "application/zip"
+        - "application/x-zip-compressed"
     # The model spec of the deployment uses the OpenAI endpoint: the same files as for agents
     openAI:
-      # A file that is attached is sent to the model again with every later message of the chat, so a message may carry few and small
-      # files: at most 3, 8 MB each and 15 MB together
-      fileLimit: 3
-      fileSizeLimit: 8
-      totalSizeLimit: 15
+      fileLimit: 20
+      fileSizeLimit: 50
+      totalSizeLimit: 200
       supportedMimeTypes:
         - "image/jpeg"
         - "image/png"
@@ -145,9 +149,13 @@ fileConfig:
         - "text/plain"
         - "text/markdown"
         - "text/csv"
+        - "text/xml"
+        - "application/xml"
         - "application/vnd.ms-excel"
         - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         - "application/pdf"
+        - "application/zip"
+        - "application/x-zip-compressed"
 
 # Local file storage (not S3/Firebase/Azure) - writes uploads to /app/uploads
 # inside the container, bind-mounted to ./librechat/uploads on the host
@@ -247,4 +255,4 @@ mcpServers:
       Accept: "application/json, text/event-stream"
     timeout: 180000
     initTimeout: 30000
-    serverInstructions: "Runs the Python scripts of the skills. Use list_skill_scripts to see them, write_file to give a script its input in the workspace, run_skill_script to run one and read_file to read what it wrote."
+    serverInstructions: "Runs the Python scripts of the skills and custom Python/Bash code in an isolated sandbox with read-only access to the staging inbox (/inbox and /uploads) and Moqui content store (/content). Use list_skill_scripts to see skill scripts, write_file to write inputs in /workspace, run_skill_script to run a skill script, run_python or run_bash for ad-hoc extraction/ETL, and read_file to read outputs."

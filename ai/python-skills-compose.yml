@@ -20,17 +20,21 @@ services:
     volumes:
       - ./librechat/skills:/skills:ro
       - ./librechat/skill-workspace:/workspace
-      # documents of compliance projects, read only: the inbox the user fills (any size, never through the chat) and the
-      # content store Moqui copies attached files into (mantle.compliance.ContentServices.attach#Content)
+      # documents of compliance projects, read only: the inbox the user fills (any size, never through the chat), the
+      # staging uploads directory of LibreChat (fileStrategy: local), and the content store Moqui copies attached files
+      # into (mantle.compliance.ContentServices.attach#Content)
       - ./compliance-inbox:/inbox:ro
+      - ./librechat/uploads:/uploads:ro
       - ./compliance-content:/content:ro
     environment:
       - SKILLS_DIR=/skills
       - WORKSPACE_DIR=/workspace
       - INBOX_DIR=/inbox
+      - UPLOADS_DIR=/uploads
       - CONTENT_DIR=/content
       - RUN_TIMEOUT_SECONDS=120
-      - RUN_PYTHON_ENABLED=false
+      - RUN_PYTHON_ENABLED=true
+      - RUN_BASH_ENABLED=true
     read_only: true
     tmpfs:
       - /tmp:size=64m

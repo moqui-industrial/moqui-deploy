@@ -19,11 +19,15 @@ from mcp.server.transport_security import TransportSecuritySettings
 
 SKILLS_DIR = Path(os.environ.get("SKILLS_DIR", "/skills")).resolve()
 WORKSPACE = Path(os.environ.get("WORKSPACE_DIR", "/workspace")).resolve()
+INBOX_DIR = os.environ.get("INBOX_DIR", "/inbox")
+UPLOADS_DIR = os.environ.get("UPLOADS_DIR", "/uploads")
+CONTENT_DIR = os.environ.get("CONTENT_DIR", "/content")
 TIMEOUT_SECONDS = int(os.environ.get("RUN_TIMEOUT_SECONDS", "120"))
 MAX_OUTPUT_BYTES = int(os.environ.get("MAX_OUTPUT_BYTES", str(200 * 1024)))
 MAX_FILE_BYTES = int(os.environ.get("MAX_FILE_BYTES", str(2 * 1024 * 1024)))
 MEMORY_BYTES = int(os.environ.get("RUN_MEMORY_BYTES", str(1024 * 1024 * 1024)))
 RUN_PYTHON_ENABLED = os.environ.get("RUN_PYTHON_ENABLED", "false").lower() == "true"
+RUN_BASH_ENABLED = os.environ.get("RUN_BASH_ENABLED", "false").lower() == "true"
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 slots = threading.BoundedSemaphore(int(os.environ.get("RUN_PARALLEL", "2")))
 
@@ -66,7 +70,8 @@ def _skill_dir(skill: str) -> Path:
 def _limits():
     resource.setrlimit(resource.RLIMIT_AS, (MEMORY_BYTES, MEMORY_BYTES))
     resource.setrlimit(resource.RLIMIT_CPU, (TIMEOUT_SECONDS + 5, TIMEOUT_SECONDS + 5))
-    resource.setrlimit(resource.RLIMIT_NPROC, (64, 64))
+    # Container-level process limit is enforced by cgroup pids_limit in python-skills-compose.yml;
+    # RLIMIT_NPROC counts all host threads of UID 1000 and would block fork() in subprocesses (pdftotext, bash).
     resource.setrlimit(resource.RLIMIT_FSIZE, (MAX_FILE_BYTES * 8, MAX_FILE_BYTES * 8))
     os.setsid()
 
@@ -81,7 +86,8 @@ def _run(argv, cwd: Path) -> dict:
         return {"error": "too many scripts running; try again"}
     try:
         env = {"PATH": "/usr/local/bin:/usr/bin:/bin", "HOME": str(cwd), "TMPDIR": str(cwd), "LANG": "C.UTF-8",
-               "PYTHONDONTWRITEBYTECODE": "1", "SKILLS_DIR": str(SKILLS_DIR), "WORKSPACE_DIR": str(WORKSPACE)}
+               "PYTHONDONTWRITEBYTECODE": "1", "SKILLS_DIR": str(SKILLS_DIR), "WORKSPACE_DIR": str(WORKSPACE),
+               "INBOX_DIR": INBOX_DIR, "UPLOADS_DIR": UPLOADS_DIR, "CONTENT_DIR": CONTENT_DIR}
         try:
             done = subprocess.run(argv, cwd=cwd, env=env, stdin=subprocess.DEVNULL, capture_output=True,
                                   timeout=TIMEOUT_SECONDS, preexec_fn=_limits, shell=False)
@@ -173,16 +179,35 @@ def list_files(path: str = "") -> dict:
 if RUN_PYTHON_ENABLED:
     @mcp.tool()
     def run_python(code: str) -> dict:
-        """Runs a piece of Python code in the workspace, under the same limits as a script. Enabled by the deployment only."""
+        """Runs a piece of Python code in the workspace, under the same limits as a script. Read-only access to /inbox, /uploads, /content; writable /workspace."""
         if len(code) > MAX_FILE_BYTES:
             raise ValueError("the code is too long")
         with tempfile.NamedTemporaryFile("w", suffix=".py", dir=WORKSPACE, delete=False) as f:
             f.write(code)
             name = f.name
         try:
-            return _run([sys.executable, "-E", "-s", name], WORKSPACE)
+            res = _run([sys.executable, "-E", "-s", name], WORKSPACE)
         finally:
             os.unlink(name)
+        res["files"] = _files_after(WORKSPACE)
+        return res
+
+
+if RUN_BASH_ENABLED:
+    @mcp.tool()
+    def run_bash(script: str) -> dict:
+        """Runs a Bash script in the workspace, under the same resource/network limits as a Python script. Read-only access to /inbox, /uploads, /content; writable /workspace."""
+        if len(script) > MAX_FILE_BYTES:
+            raise ValueError("the script is too long")
+        with tempfile.NamedTemporaryFile("w", suffix=".sh", dir=WORKSPACE, delete=False) as f:
+            f.write(script)
+            name = f.name
+        try:
+            res = _run(["/bin/bash", name], WORKSPACE)
+        finally:
+            os.unlink(name)
+        res["files"] = _files_after(WORKSPACE)
+        return res
 
 
 if __name__ == "__main__":
