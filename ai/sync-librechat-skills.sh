@@ -25,14 +25,24 @@ done
 # under `metadata` (the sources stay as the specification has them)
 python3 - "$TARGET" <<'PY'
 import sys, pathlib, yaml
+bad = []
 for md in sorted(pathlib.Path(sys.argv[1]).glob('*/SKILL.md')):
     text = md.read_text(encoding='utf-8')
-    if not text.startswith('---'): continue
+    if not text.startswith('---'): bad.append(f'{md}: no front matter'); continue
     head, sep, body = text[3:].partition('\n---')
-    fm = yaml.safe_load(head) or {}
+    # LibreChat refuses to start on one bad skill: valid YAML, a name and a description of at most 1024 characters
+    try:
+        fm = yaml.safe_load(head) or {}
+    except yaml.YAMLError as e:
+        bad.append(f'{md}: front matter is not valid YAML ({str(e).splitlines()[0]})'); continue
+    if not fm.get('name'): bad.append(f'{md}: no name')
+    if not fm.get('description') or len(fm['description']) > 1024:
+        bad.append(f"{md}: description missing or longer than 1024 characters ({len(fm.get('description') or '')})")
     if 'compatibility' not in fm: continue
     fm.setdefault('metadata', {})['compatibility'] = fm.pop('compatibility')
     md.write_text('---\n' + yaml.safe_dump(fm, sort_keys=False, allow_unicode=True, width=1000) + '---' + body, encoding='utf-8')
+if bad:
+    sys.exit('skills LibreChat would refuse (it would not start):\n  ' + '\n  '.join(bad))
 PY
 # what no source has any more goes away
 for existing in "$TARGET"/*/; do
