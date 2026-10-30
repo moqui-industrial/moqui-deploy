@@ -7,6 +7,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET="$HERE/librechat/skills"
 SOURCES=(
   "/home/igor/development/projects/moqui/moqui-industrial/moqui-agent-skills/.agents/skills"
+  "/home/igor/development/projects/moqui/master/moqui-plc/.agents/skills"
 )
 mkdir -p "$TARGET"
 declare -A seen
