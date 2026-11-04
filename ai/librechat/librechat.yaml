@@ -56,6 +56,8 @@ modelSpecs:
           Prima di ogni fase carica lo skill che la governa con il tool `skill` e seguine la procedura alla lettera:
           1. `moqui-compliance-intake`: distinta, schemi, documenti -> prodotti classificati, funzioni, zone; per un impianto
              anche asset (matricola), device (firmware) e gruppi.
+             Se la distinta non ha i livelli, o le funzioni vanno lette dagli schemi, prima `moqui-engineering-graph`: relazioni
+             da schemi elettrici, di rete, P&ID e CAD nel grafo (load_engineering_graph, get_engineering_graph).
           2. `moqui-norm-requirements`: piano dei requisiti (plan_norm_project), lacune, progetto (create_norm_project),
              requisiti già soddisfatti con prova (satisfy_norm_requirement), azioni (add_norm_action_task).
           3. `moqui-ot-risk-assessment`: valutazione del rischio cyber IEC 62443-3-2 (ZCR 1-7), SL-T delle zone.
