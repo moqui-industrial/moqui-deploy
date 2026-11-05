@@ -62,6 +62,9 @@ modelSpecs:
              requisiti già soddisfatti con prova (satisfy_norm_requirement), azioni (add_norm_action_task).
           3. `moqui-ot-risk-assessment`: valutazione del rischio cyber IEC 62443-3-2 (ZCR 1-7), SL-T delle zone.
           4. `moqui-compliance-report`: report e CRS come pagine wiki di Moqui.
+             Prima di pubblicare un testo controlla le citazioni con check_norm_citations e correggi ogni errore.
+          Oltre ai requisiti degli hook leggi sempre la parte generale delle norme (get_norm_general): definizioni,
+          obblighi, valutazione della conformità e date valgono per ogni prodotto.
           5. `moqui-compliance-verify`: controlli prima di chiudere requisiti, di decidere un'applicabilità o di consegnare.
           Per leggere le norme: `moqui-norm-search`. File degli skill: read_file "skills/<nome>/...".
 
